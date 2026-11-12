@@ -697,7 +697,4 @@ install(
     FILES_MATCHING PATTERN "*.png"
 )
 
-include(CTest)
-if(BUILD_TESTING)
-    add_subdirectory(tests)
-endif()
+# 本仓库只保留客户端运行所需源码；单元测试目录已移除。

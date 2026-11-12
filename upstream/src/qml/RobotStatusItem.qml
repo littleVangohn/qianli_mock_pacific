@@ -1,7 +1,7 @@
 /**
  * @file RobotStatusItem.qml
  * @brief 单个机器人状态组件 (用于顶部栏列表)
- * @details 使用 docs/sprites 的顶部机器人卡片风格素材：
+ * @details 使用 resources/images 的顶部机器人卡片风格素材：
  *   - 底板 + 机器人头像 + 编号贴片 + 底部血条
  */
 

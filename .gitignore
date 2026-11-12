@@ -1,6 +1,5 @@
 # ---- 本机运行产物 ----
 /tmp/
-/test/jitter/out/
 **/__pycache__/
 *.pyc
 *.log
@@ -11,9 +10,6 @@
 
 # ---- 本机现场配置（IP / 机器人 ID）----
 /upstream/config.json
-
-# ---- 旧源码快照；想保留就删掉下面这行 ----
-/test/jitter/_baseline_src/
 
 # ---- 编辑器 / 系统 ----
 .DS_Store

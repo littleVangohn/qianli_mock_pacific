@@ -4,23 +4,22 @@
 #
 #   bash /mnt/d/Pacific_doorlock/cquqianli_mock/run.sh
 #
-# 为什么需要"一条命令管到底"：
-#   自定义客户端拿不到数据，90% 是下面四件事之一没做对。它们互相依赖、顺序不能换，
-#   所以全部收进这里，避免每次开机靠记忆敲一串。
-#
+# 它按顺序做四件事：
 #   1. 稳定本机   —— 放大内核 UDP 接收缓冲、杀掉抢 ClientId 的残留客户端
-#   2. 稳定寻址   —— WSL 的 IP 每次重启会变，把 config.json 重新指向当前 Windows 主机
-#   3. 拉起官方选手端 —— 它身兼两职：MQTT broker（3333）+ 赛事数据桥接。
-#                        不开它，自定义客户端连 3333 都连不上，更不会有数据。
-#                        （数据源头再往上一级是裁判系统栈，本脚本不负责，见 README）
-#   4. 等就绪再连  —— 轮询 3333 直到 broker 真的在监听，并确认 ClientId 空闲
+#   2. 稳定寻址   —— WSL 的 IP 每次重启会变，把 config.json 指向当前 Windows 主机
+#   3. 拉起依赖   —— 图传 daemon（可选）和官方选手端（= MQTT broker :3333）
+#   4. 启动客户端 —— ~/rm26-build/RoboMasterClient2025
 #
-# 首次部署想彻底摆脱"每次弹 UAC"，先跑一次（只需一次管理员授权）：
+# 已经用 D:\Pacific_doorlock\裁判系统服务器\start_local_sim.bat 起过整套栈时，
+# 本脚本会自动复用已在监听的 broker 和已在运行的 daemon，只补启自定义客户端。
+#
+# 首次构建（产物固定为 ~/rm26-build/RoboMasterClient2025）：
+#
+#   bash .../run.sh --build
+#
+# 首次部署想彻底摆脱“每次弹 UAC”，先跑一次（只需一次管理员授权）：
 #
 #   bash .../run.sh --fix-acl
-#
-# 它给官方选手端目录补上当前 Windows 用户的写权限。做完之后 ty 就能直接启动，
-# 不再需要管理员。
 #
 # 可选环境变量：
 #   RM26_BUILD_DIR       自定义客户端的构建目录（默认 ~/rm26-build）
@@ -32,7 +31,7 @@ set -uo pipefail
 SELF="$(readlink -f "${BASH_SOURCE[0]}")"
 REPO="$(dirname "$SELF")"
 UPSTREAM="$REPO/upstream"
-CONFIG="$UPSTREAM/config.json"
+CONFIG_EXAMPLE="$UPSTREAM/config.example.json"
 BUILD="${RM26_BUILD_DIR:-$HOME/rm26-build}"
 CLIENT_EXE="$BUILD/RoboMasterClient2025"
 
@@ -46,7 +45,6 @@ PWSH='/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe'
 WIN_DAEMON_DIR_WIN="$WIN_DIR_WIN\\RoboMasterClient_Data\\StreamingAssets\\Tools\\RMClientDaemon"
 WIN_DAEMON_EXE_WIN="$WIN_DAEMON_DIR_WIN\\RMClientDaemon.exe"
 
-
 # --- 引擎装甲日志（受击方向只有这个来源） ----------------------------------
 ENGINE_LOG_DIR='/mnt/d/Pacific_doorlock/从零开始认识裁判系统/RoboMasterEngine 12.0.0.176_Student/RoboMasterEngine 12.0.0.176_Student/RoboMasterEngine_Data/StreamingAssets/RMServer/RMServerLogClient/RM裁判系统日志文件夹3.0'
 
@@ -58,22 +56,40 @@ step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 warn() { printf '  \033[33m⚠ %s\033[0m\n' "$*"; }
 ok()   { printf '  \033[32m✓ %s\033[0m\n' "$*"; }
 
+usage() {
+  cat <<'EOF'
+cquqianli_mock 一键启动（WSL Ubuntu 22.04）
+
+  bash run.sh              起依赖 + 自定义客户端
+  bash run.sh --build      构建到 ~/rm26-build/RoboMasterClient2025
+  bash run.sh --fix-acl    一次性授权，之后启动官方选手端不再弹 UAC
+  bash run.sh --help       显示本帮助
+
+已经用过 D:\Pacific_doorlock\裁判系统服务器\start_local_sim.bat 时，
+run.sh 会自动复用已在监听的 MQTT broker 和已在运行的图传 daemon。
+
+环境变量：
+  RM26_BUILD_DIR       构建目录（默认 ~/rm26-build）
+  RM_CLIENT_ROBOT_ID   覆盖机器人编号（默认读 upstream/config.json）
+EOF
+}
+
 # ============================================================================
 # 0. 前置检查
 # ============================================================================
 preflight() {
   step "0/6 前置检查"
 
-  if [ ! -f "$CONFIG" ]; then
-    warn "找不到 $CONFIG"
-    say  "  先执行一次：bash $REPO/test/mkconfig.sh"
-    exit 1
+  if [ ! -f "$UPSTREAM/config.json" ]; then
+    cp "$CONFIG_EXAMPLE" "$UPSTREAM/config.json" || exit 1
+    ok "config.json 不存在，已从 config.example.json 生成"
+  else
+    ok "config.json 就位"
   fi
-  ok "config.json 就位"
 
   if [ ! -x "$CLIENT_EXE" ]; then
     warn "自定义客户端还没构建：$CLIENT_EXE"
-    say  "  先执行：bash $REPO/test/build.sh"
+    say  "  先执行：bash $SELF --build"
     exit 1
   fi
   ok "自定义客户端已构建"
@@ -145,22 +161,22 @@ PY
 # 3. 图传 daemon（必须在官方选手端之前）
 # ============================================================================
 # 链路：图传模块 → RMClientDaemon（COM5 + 图传 USB，cuda 硬解）→ 共享内存 → 官方选手端窗口。
-# daemon 不在，官方选手端只显示"图传未接入"，一个错都不报。
+# daemon 不在，官方选手端只显示“图传未接入”，一个错都不报。
 # 反过来先起客户端再起 daemon，共享内存对不上，也必须重启客户端。
 daemon_alive() {
-  "$PWSH" -NoProfile -Command \
+  timeout 8 "$PWSH" -NoProfile -Command \
     "if (Get-Process RMClientDaemon -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }" \
     >/dev/null 2>&1
 }
 
 client_alive() {
-  "$PWSH" -NoProfile -Command \
+  timeout 8 "$PWSH" -NoProfile -Command \
     "if (Get-Process RoboMasterClient -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }" \
     >/dev/null 2>&1
 }
 
 kill_daemon() {
-  "$PWSH" -NoProfile -Command \
+  timeout 10 "$PWSH" -NoProfile -Command \
     "foreach (\$n in 'RMClientDaemon','RMClientAssist_VideoRecord','RMClientAssist_MarkRecognition','RMClientAssist_SerialPort','RMClientAssist_RemoteSerialPort') { Get-Process -Name \$n -ErrorAction SilentlyContinue | Stop-Process -Force }" \
     >/dev/null 2>&1
   sleep 2
@@ -169,30 +185,32 @@ kill_daemon() {
 start_video_daemon() {
   step "3/6 图传 daemon（COM5 + 图传 USB）"
 
-  local dji
-  dji=$("$PWSH" -NoProfile -Command \
-    "(Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { \$_.InstanceId -match 'VID_2CA3' -and \$_.Class -eq 'Ports' } | ForEach-Object { \$_.FriendlyName }) -join ', '" \
-    2>/dev/null | tr -d '\r')
-  if [ -z "$dji" ]; then
-    warn "Windows 没枚举到 DJI 图传接收端（VID_2CA3 / COM5 / COM8）"
-    warn "接收端没插好就不会有画面；插好后重跑本脚本"
-  else
-    ok "图传接收端：$dji"
-  fi
-
+  # daemon 已在运行时不再枚举 PnP 设备：Get-PnpDevice 偶尔会卡住，
+  # 而 start_local_sim.bat 通常已经先把 daemon 起好了。
   if daemon_alive; then
     ok "daemon 已在运行，复用"
   else
+    local dji
+    dji=$(timeout 8 "$PWSH" -NoProfile -Command \
+      "(Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { \$_.InstanceId -match 'VID_2CA3' -and \$_.Class -eq 'Ports' } | ForEach-Object { \$_.FriendlyName }) -join ', '" \
+      2>/dev/null | tr -d '\r') || dji=""
+    if [ -z "$dji" ]; then
+      warn "Windows 没枚举到 DJI 图传接收端（VID_2CA3 / COM5 / COM8）"
+      warn "接收端没插好就不会有画面；插好后重跑本脚本"
+    else
+      ok "图传接收端：$dji"
+    fi
+
     if client_alive; then
       warn "官方选手端先于 daemon 起来了，共享内存对不上 —— 重启官方选手端"
-      "$PWSH" -NoProfile -Command \
+      timeout 8 "$PWSH" -NoProfile -Command \
         "Stop-Process -Name RoboMasterClient -Force -ErrorAction SilentlyContinue" >/dev/null 2>&1
       sleep 2
     fi
 
     kill_daemon
     say "  启动 RMClientDaemon ..."
-    "$PWSH" -NoProfile -Command \
+    timeout 10 "$PWSH" -NoProfile -Command \
       "Start-Process -FilePath '$WIN_DAEMON_EXE_WIN' -WorkingDirectory '$WIN_DAEMON_DIR_WIN'" \
       >/dev/null 2>&1
     sleep 6
@@ -254,7 +272,7 @@ launch_official_client() {
   local elevate="${1:-0}" verb=""
   [ "$elevate" = "1" ] && verb="-Verb RunAs"
   # 用 -LiteralPath 语义传路径，中文目录在 WSL→PowerShell 之间不会乱码
-  "$PWSH" -NoProfile -Command \
+  timeout 10 "$PWSH" -NoProfile -Command \
     "Start-Process -FilePath '$WIN_EXE_WIN' -WorkingDirectory '$WIN_DIR_WIN' $verb" \
     >/dev/null 2>&1
 }
@@ -296,20 +314,41 @@ ensure_broker() {
 # ============================================================================
 check_client_id() {
   local cid="$1"
-  python3 - "$REPO/test" "$WINIP" "$MQTT_PORT" "$cid" <<'PY'
-import sys
-sys.path.insert(0, sys.argv[1])
-from mqtt_probe import mqtt_connect
-host, port, cid = sys.argv[2], int(sys.argv[3]), sys.argv[4]
-code, err = mqtt_connect(host, port, cid)
-if code is None:
-    print(f"  \033[33m⚠ 握手失败：{err}\033[0m"); sys.exit(2)
+  python3 - "$WINIP" "$MQTT_PORT" "$cid" <<'PY'
+import socket, struct, sys
+
+host, port, cid = sys.argv[1], int(sys.argv[2]), sys.argv[3].encode()
+payload = b"\x00\x04MQTT\x04\x02\x00\x05" + struct.pack("!H", len(cid)) + cid
+n, enc = len(payload), bytearray()
+while True:
+    b, n = n % 128, n // 128
+    enc.append(b | (0x80 if n else 0))
+    if not n:
+        break
+packet = b"\x10" + bytes(enc) + payload
+
+try:
+    s = socket.create_connection((host, port), 2)
+    s.settimeout(2)
+    s.sendall(packet)
+    resp = s.recv(4)
+    s.close()
+except Exception as e:
+    print(f"  \033[33m⚠ 握手失败：{e}\033[0m")
+    sys.exit(2)
+
+if len(resp) < 4:
+    print("  \033[33m⚠ 握手失败：broker 未返回 CONNACK\033[0m")
+    sys.exit(2)
+code = resp[3]
 if code == 0:
-    print(f"  \033[32m✓ ClientId {cid} 空闲\033[0m"); sys.exit(0)
+    print(f"  \033[32m✓ ClientId {cid.decode()} 空闲\033[0m")
+    sys.exit(0)
 if code == 2:
-    print(f"  \033[33m⚠ ClientId {cid} 已被占用（别的客户端/桥接进程还连着）\033[0m")
+    print(f"  \033[33m⚠ ClientId {cid.decode()} 已被占用（别的客户端/桥接进程还连着）\033[0m")
     sys.exit(1)
-print(f"  \033[33m⚠ ClientId {cid} 被拒，返回码 {code}\033[0m"); sys.exit(1)
+print(f"  \033[33m⚠ ClientId {cid.decode()} 被拒，返回码 {code}\033[0m")
+sys.exit(1)
 PY
 }
 
@@ -323,7 +362,7 @@ start_custom_client() {
   cid=$(python3 -c "
 import json,sys
 print(json.load(open(sys.argv[1],encoding='utf-8'))['network'].get('client_robot_id',1))
-" "$CONFIG" 2>/dev/null)
+" "$UPSTREAM/config.json" 2>/dev/null)
   cid="${RM_CLIENT_ROBOT_ID:-$cid}"
 
   # 同一个 ClientId 同时只能有一个连接；被占着的话连上也拿不到数据，
@@ -349,12 +388,41 @@ print(json.load(open(sys.argv[1],encoding='utf-8'))['network'].get('client_robot
 }
 
 # ============================================================================
-# --fix-acl：一次性授权，让 ty 免管理员启动官方选手端
+# --build：构建到 ~/rm26-build/RoboMasterClient2025
+# ============================================================================
+build_client() {
+  step "构建自定义客户端"
+
+  # 仓库改名或搬家后，CMakeCache 里记的源码目录就失效了，cmake 会直接报错退出。
+  # 这里先比对缓存，不一致就整个清掉重新配置，省得手动 rm -rf。
+  local cache="$BUILD/CMakeCache.txt"
+  if [ -f "$cache" ]; then
+    local cached
+    cached=$(sed -n 's/^CMAKE_HOME_DIRECTORY:INTERNAL=//p' "$cache" | head -1)
+    if [ -n "$cached" ] && [ "$cached" != "$UPSTREAM" ]; then
+      warn "源码目录已变更：缓存 $cached → 现在 $UPSTREAM，清掉旧缓存"
+      rm -rf "$BUILD"
+    fi
+  fi
+
+  say "  配置 → $BUILD"
+  cmake -S "$UPSTREAM" -B "$BUILD" -G Ninja \
+    -DCMAKE_BUILD_TYPE=Release -DRM_VALIDATE_ASSETS=OFF || exit 1
+
+  say "  编译 ..."
+  cmake --build "$BUILD" -j"$(nproc)" || exit 1
+
+  [ -x "$CLIENT_EXE" ] || { warn "构建结束但没有产物：$CLIENT_EXE"; exit 1; }
+  ok "产物：$CLIENT_EXE"
+}
+
+# ============================================================================
+# --fix-acl：一次性授权，让当前 Windows 用户免管理员启动官方选手端
 # ============================================================================
 fix_acl() {
   step "一次性授权：让当前用户可写官方选手端目录"
   local winuser
-  winuser=$("$PWSH" -NoProfile -Command '[Environment]::UserName' 2>/dev/null | tr -d '\r\n')
+  winuser=$(timeout 8 "$PWSH" -NoProfile -Command '[Environment]::UserName' 2>/dev/null | tr -d '\r\n')
   if [ -z "$winuser" ]; then
     warn "拿不到 Windows 用户名"; exit 1
   fi
@@ -362,7 +430,7 @@ fix_acl() {
   say "  目标目录：$WIN_DIR_WIN"
   say "  接下来会弹一次 UAC，点是即可。"
   # icacls 用管理员跑；/T 递归到子目录，/grant 给 Modify 权限
-  "$PWSH" -NoProfile -Command \
+  timeout 120 "$PWSH" -NoProfile -Command \
     "Start-Process -FilePath 'icacls.exe' -ArgumentList '\"$WIN_DIR_WIN\"','/grant','\"$winuser:(OI)(CI)M\"','/T' -Verb RunAs -Wait" \
     >/dev/null 2>&1
   ok "已提交授权（若 UAC 被取消则未生效）。之后直接跑 run.sh 即可，不再需要管理员。"
@@ -372,8 +440,11 @@ fix_acl() {
 # 主流程
 # ============================================================================
 case "${1:-}" in
+  --build) build_client; exit 0 ;;
   --fix-acl) fix_acl; exit 0 ;;
-  -h|--help) sed -n '2,26p' "$SELF" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  -h|--help) usage; exit 0 ;;
+  "") ;;
+  *) warn "未知参数：$1（可用：--build / --fix-acl / --help）"; exit 2 ;;
 esac
 
 preflight

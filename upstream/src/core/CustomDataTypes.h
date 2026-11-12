@@ -21,14 +21,14 @@ static constexpr uint8_t kRobotCustomStatusMagic = 0x5A;
 static constexpr uint8_t kRobotCustomStatusVersion = 1;
 
 /// v2：应用负载 11 -> 12 字节，新增 Byte 11 module_status（E5 模块状态位）。
-/// 对接文档：docs/real_vehicle_integration/电控组E5模块状态对接文档.md
+/// 协议说明：仓库根目录 README.md「电控状态包」一节
 static constexpr uint8_t kRobotCustomStatusVersionV2 = 2;
 
 /**
  * @struct RobotCustomStatus
  * @brief 机器人自定义状态数据结构
  * @details v1 共 11 字节、v2 共 12 字节，经图传链路 0x0310 → 官方选手端 MQTT CustomByteBlock 传输。
- *          对接文档：docs/real_vehicle_integration/电控组最小数据对接文档.md 第 5 节
+ *          协议说明：仓库根目录 README.md「电控状态包」一节
  *
  * 数据布局（有效数据连续，无保留字节）:
  * - Byte 0:    magic = 0x5A

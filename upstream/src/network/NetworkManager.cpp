@@ -1629,10 +1629,12 @@ void NetworkManager::processMqttMessage(const QString &topic,
                 .toUtf8());
       }
       // 按魔数分流：以 0x5A 开头且长度够的是电控状态包，其余按 H.264 视频分片处理。
-      // 不再依赖长度猜测——同通道的视频分片约 300 字节、状态包 11 字节，
-      // 但短视频分片或将来同通道的其他数据会落进同一长度区间。
+      // 不再依赖长度猜测——同通道的视频分片约 300 字节、状态包 11 字节（v1）或 12 字节（v2）。
+      // 注意门槛必须是 11 而不是 sizeof(RobotCustomStatus)=12，否则只发电控 v1 包的
+      // 车端会被误判成视频分片而整包丢弃。
+      constexpr int kMinCustomStatusSize = 11;
       const bool isStateBlock =
-          data.size() >= static_cast<int>(sizeof(RobotCustomStatus)) &&
+          data.size() >= kMinCustomStatusSize &&
           static_cast<quint8>(data.at(0)) == kRobotCustomStatusMagic;
       if (isStateBlock) {
         parseCustomByteBlock(data);
@@ -1852,7 +1854,6 @@ void NetworkManager::parseCustomByteBlock(const QByteArray &data) {
     robot.pitchValid = status.friction_status.bits.pitch_valid;
 
     // 解析底盘模式：线上只传 chassis_mode，其余状态本地推导
-    //（冗余位已从对接文档删除，见 电控组对接文档.md 第 4 节）
     robot.chassisMode = status.chassis_status.bits.chassis_mode;
     robot.spinMode = (robot.chassisMode == 2);
     robot.followMode = (robot.chassisMode == 1);

@@ -4,8 +4,10 @@
  * @brief 机械臂自定义控制协议（0x0311 + RS-232）
  * @details 两个方向：
  *          - 客户端 → 下位机主控：MQTT CustomControl → 0x0311，data 为 18 字节 position。
- *          - 自定义控制器 ↔ 客户端：RS-232 串口，34 字节整帧，
+ *          - 自定义控制器 → 客户端：RS-232 串口，34 字节整帧，
  *            [0:16) 为通信头（客户端忽略），[16:34) 为 position。
+ *          - 客户端 → 自定义控制器：RS-232 串口，裸 18 字节 position，
+ *            仅用于 Z 切换后的模式确认（关节角 0，relative_time 表示模式）。
  *
  *          position（packed、小端）：
  *            7 × uint16 joint_angle + uint32 relative_time。
@@ -64,24 +66,12 @@ inline QByteArray packPosition(const Position &position) {
   return data;
 }
 
-/// 从 34 字节串口帧中提取 18 字节 position（取 [16:34)）。
+/// 从 34 字节串口帧中提取 18 字节 position（取 [16:34)）。仅用于控制器 → 客户端方向。
 inline QByteArray extractPosition(const QByteArray &frame) {
   if (frame.size() != kCustomControllerFrameSize) {
     return {};
   }
   return frame.mid(kCustomControllerPositionOffset, kPositionSize);
-}
-
-/// 打包 34 字节串口帧：16 字节头（当前填 0，电控可约定内容）+ 18 字节 position。
-inline QByteArray packCustomControllerFrame(const Position &position,
-                                            const QByteArray &header = {}) {
-  QByteArray frame(kCustomControllerFrameSize, '\0');
-  if (header.size() == kCustomControllerHeaderSize) {
-    frame.replace(0, kCustomControllerHeaderSize, header);
-  }
-  frame.replace(kCustomControllerPositionOffset, kPositionSize,
-                packPosition(position));
-  return frame;
 }
 
 } // namespace RM::ArmProtocol

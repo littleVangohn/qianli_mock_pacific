@@ -5995,7 +5995,8 @@ void MainWindow::toggleArmControlMode() {
   m_networkManager->sendData(modeFrame, QHostAddress::LocalHost, 0);
   ++m_armPositionFramesSent;
 
-  // 同时写回自定义控制器（RS-232）；连写 3 帧覆盖串口偶发误码。
+  // 同时写回自定义控制器（RS-232）；裸 18 字节 position 连写 3 帧，
+  // 让控制器确认模式已切换，并覆盖串口偶发误码。
   if (m_armSerialLink && m_armSerialLink->isOpen()) {
     for (int i = 0; i < 3; ++i) {
       m_armSerialLink->writeModeFrame(modePosition);

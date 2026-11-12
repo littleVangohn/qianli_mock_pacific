@@ -3,10 +3,10 @@
  * @file ArmSerialLink.h
  * @brief 自定义控制器 RS-232 串口链路
  * @details 自定义控制器通过 USB-RS232 直连上位机，按 34 字节定长帧收发：
- *            [0:16)  通信头（客户端忽略，发送时填 0）
+ *            [0:16)  通信头（客户端忽略）
  *            [16:34) 机械臂 position（7×uint16 + uint32，小端）
  *          接收到的 position 由 MainWindow 持续转发到 CustomControl（0x0311）；
- *          模式切换帧（relative_time = 0 / INT_MAX）同时写回串口。
+ *          Z 切换后客户端用同一个串口回发裸 18 字节 position 作为模式确认。
  */
 
 #ifndef ARMSERIALLINK_H
@@ -35,7 +35,7 @@ public:
   bool isOpen() const;
   QString portName() const;
 
-  /// 把 34 字节模式帧写回自定义控制器（16 字节头填 0）。
+  /// 把 18 字节模式 position 写回自定义控制器（关节角 0，relative_time = 0 / INT_MAX）。
   bool writeModeFrame(const ArmProtocol::Position &position);
 
 signals:

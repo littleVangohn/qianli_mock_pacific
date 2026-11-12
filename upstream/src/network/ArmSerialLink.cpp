@@ -77,7 +77,8 @@ bool ArmSerialLink::writeModeFrame(const ArmProtocol::Position &position) {
   if (!isOpen()) {
     return false;
   }
-  const QByteArray frame = ArmProtocol::packCustomControllerFrame(position);
+  // 客户端 → 控制器方向只发裸 18 字节 position，不再套 16 字节通信头。
+  const QByteArray frame = ArmProtocol::packPosition(position);
   const qint64 written = m_port->write(frame);
   if (written != frame.size()) {
     qWarning() << "ArmSerialLink: short write" << written << "/" << frame.size();

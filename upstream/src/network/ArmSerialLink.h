@@ -33,7 +33,6 @@ public:
   void stop();
 
   bool isOpen() const;
-  QString portName() const;
 
   /// 把 18 字节模式 position 写回自定义控制器（关节角 0，relative_time = 0 / INT_MAX）。
   bool writeModeFrame(const ArmProtocol::Position &position);

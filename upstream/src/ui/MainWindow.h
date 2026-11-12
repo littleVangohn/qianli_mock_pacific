@@ -615,8 +615,6 @@ private:
   QByteArray m_armVisionFrame;     // 视觉自动状态帧（18 字节，持续发送）
   qint64 m_armLastPositionMs = 0;  // 最近一次收到 position 的时间
   bool m_armStaleNoticeLogged = false;
-  quint64 m_armPositionFramesReceived = 0;
-  quint64 m_armPositionFramesSent = 0;
 
   // 右下角键鼠监视器：记录原始输入，不受上发策略/登录状态影响，
   // 用来直观看到“按了什么”以及“有没有真正发出去”。

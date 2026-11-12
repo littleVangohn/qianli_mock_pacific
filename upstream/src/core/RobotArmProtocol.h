@@ -41,20 +41,6 @@ struct Position {
   quint32 relativeTime = kRelativeTimeVisionAuto;
 };
 
-/// 从 18 字节协议数据解包；长度不对时返回默认值。
-inline Position unpackPosition(const QByteArray &data) {
-  Position position;
-  if (data.size() != kPositionSize) {
-    return position;
-  }
-  const auto *bytes = reinterpret_cast<const uchar *>(data.constData());
-  for (int i = 0; i < kJointCount; ++i) {
-    position.jointAngle[i] = qFromLittleEndian<quint16>(bytes + i * 2);
-  }
-  position.relativeTime = qFromLittleEndian<quint32>(bytes + 14);
-  return position;
-}
-
 /// 打包为 18 字节协议数据（小端）。
 inline QByteArray packPosition(const Position &position) {
   QByteArray data(kPositionSize, Qt::Uninitialized);

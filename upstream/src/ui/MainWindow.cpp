@@ -5925,7 +5925,6 @@ void MainWindow::onArmPositionReceived(const QByteArray &position) {
   m_lastArmPosition = position;
   m_armLastPositionMs = QDateTime::currentMSecsSinceEpoch();
   m_armStaleNoticeLogged = false;
-  ++m_armPositionFramesReceived;
   // 视觉自动状态下只缓存；自定义控制状态下由 50 Hz 定时器持续上发。
 }
 
@@ -5945,7 +5944,6 @@ void MainWindow::flushArmPosition() {
     if (!m_lastArmPosition.isEmpty()) {
       // 持续重发最新 position；relative_time 保持自定义控制器给的值。
       m_networkManager->sendData(m_lastArmPosition, QHostAddress::LocalHost, 0);
-      ++m_armPositionFramesSent;
     }
 
     // 串口超过 300 ms 没有新帧：告警一次，但继续重发最后一帧；
@@ -5965,7 +5963,6 @@ void MainWindow::flushArmPosition() {
 
   // 视觉自动：持续发 INT_MAX 状态帧（关节角全 0），模式始终是确定的。
   m_networkManager->sendData(m_armVisionFrame, QHostAddress::LocalHost, 0);
-  ++m_armPositionFramesSent;
 }
 
 void MainWindow::toggleArmControlMode() {
@@ -5993,7 +5990,6 @@ void MainWindow::toggleArmControlMode() {
 
   // 0x0311 立即发一帧，随后由 50 Hz 定时器持续发送当前状态。
   m_networkManager->sendData(modeFrame, QHostAddress::LocalHost, 0);
-  ++m_armPositionFramesSent;
 
   // 同时写回自定义控制器（RS-232）；裸 18 字节 position 连写 3 帧，
   // 让控制器确认模式已切换，并覆盖串口偶发误码。

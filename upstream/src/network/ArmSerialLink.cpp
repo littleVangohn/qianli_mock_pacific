@@ -69,10 +69,6 @@ void ArmSerialLink::stop() {
 
 bool ArmSerialLink::isOpen() const { return m_port && m_port->isOpen(); }
 
-QString ArmSerialLink::portName() const {
-  return m_port ? m_port->portName() : QString();
-}
-
 bool ArmSerialLink::writeModeFrame(const ArmProtocol::Position &position) {
   if (!isOpen()) {
     return false;

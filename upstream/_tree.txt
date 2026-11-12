@@ -1,0 +1,1152 @@
+.dockerignore
+.editorconfig
+.env.docker.example
+.gitattributes
+.github
+.github/ISSUE_TEMPLATE
+.github/ISSUE_TEMPLATE/bug_report.yml
+.github/ISSUE_TEMPLATE/config.yml
+.github/ISSUE_TEMPLATE/feature_request.yml
+.github/dependabot.yml
+.github/pull_request_template.md
+.github/workflows
+.github/workflows/public-readiness.yml
+.github/workflows/quality.yml
+.gitignore
+ASSET_LICENSES.md
+CHANGELOG.md
+CMakeLists.txt
+CMakePresets.json
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+Info.plist
+LICENSE
+README.en.md
+README.md
+ROADMAP.md
+SECURITY.md
+SUPPORT.md
+THIRD_PARTY_NOTICES.md
+cmake
+cmake/ValidateAssets.cmake
+config.example.json
+docker-compose.field.yml
+docker-compose.yml
+docker
+docker/client-entrypoint.sh
+docker/client.Dockerfile
+docker/fonts-local.conf
+docker/mosquitto-local.conf
+docker/mosquitto.conf
+docker/sim.Dockerfile
+docs
+docs/README.md
+docs/architecture
+docs/architecture/data-flow.md
+docs/architecture/overview.md
+docs/architecture/protocol-boundary.md
+docs/architecture/simulator.md
+docs/architecture/tactical-analysis.md
+docs/architecture/testing.md
+docs/architecture/threading-model.md
+docs/architecture/transport-integration.md
+docs/communications
+docs/communications/2026-rm26-custom-client-open-source-release.md
+docs/communications/assets
+docs/communications/assets/2026-rm26-custom-client
+docs/communications/assets/2026-rm26-custom-client/diagrams
+docs/communications/assets/2026-rm26-custom-client/diagrams/architecture-overview.svg
+docs/communications/assets/2026-rm26-custom-client/diagrams/dart-switch-sequence.svg
+docs/communications/assets/2026-rm26-custom-client/diagrams/video-pipeline.svg
+docs/communications/assets/2026-rm26-custom-client/screenshots
+docs/communications/assets/2026-rm26-custom-client/screenshots/client-overview.png
+docs/communications/assets/2026-rm26-custom-client/screenshots/dart-after.png
+docs/communications/assets/2026-rm26-custom-client/screenshots/dart-before.png
+docs/communications/assets/2026-rm26-custom-client/screenshots/dart-during.png
+docs/communications/assets/2026-rm26-custom-client/screenshots/tactical-map.png
+docs/communications/assets/2026-rm26-custom-client/videos
+docs/communications/assets/2026-rm26-custom-client/videos/dart-hit-auto-switch.mp4
+docs/communications/assets/2026-rm26-custom-client/videos/match-overview.mp4
+docs/communications/assets/2026-rm26-custom-client/videos/tactical-map-and-base-status.mp4
+docs/decisions
+docs/decisions/0001-incremental-hardening.md
+docs/decisions/0002-versioned-example-config.md
+docs/decisions/0003-external-result-animation-assets.md
+docs/decisions/0004-optional-audio-pack.md
+docs/decisions/README.md
+docs/development
+docs/development/coding-style.md
+docs/development/verification.md
+docs/getting-started
+docs/getting-started/configuration.md
+docs/getting-started/optional-audio-pack.md
+docs/learning-path.md
+docs/maintainers
+docs/maintainers/packaging-contract.md
+docs/maintainers/protocol-convergence-plan.md
+docs/maintainers/public-release-runbook.md
+docs/maintainers/signing-policy.md
+docs/references
+docs/references/official-materials.md
+docs/rm26-client-dev-guide.md
+resources.qrc
+resources
+resources/app_icon.png
+resources/app_icon.rc
+resources/crosshair
+resources/crosshair/crosshair_Yellow.png
+resources/crosshair/crosshair_attacked_down.png
+resources/crosshair/crosshair_attacked_left.png
+resources/crosshair/crosshair_attacked_right.png
+resources/crosshair/crosshair_attacked_up.png
+resources/crosshair/crosshair_bg_double.png
+resources/crosshair/crosshair_bg_single.png
+resources/crosshair/crosshair_border_left.png
+resources/crosshair/crosshair_border_right.png
+resources/crosshair/crosshair_middle.png
+resources/crosshair/crosshair_slid_circle_bg.png
+resources/crosshair/crosshair_slid_circle_red.png
+resources/crosshair/crosshair_slid_circle_white.png
+resources/crosshair/crosshair_slid_circle_yellow.png
+resources/crosshair/crosshair_slid_double_bg.png
+resources/crosshair/crosshair_slid_double_red_left.png
+resources/crosshair/crosshair_slid_double_red_right.png
+resources/crosshair/crosshair_slid_double_white_left.png
+resources/crosshair/crosshair_slid_double_white_right.png
+resources/crosshair/crosshair_slid_double_yellow_left.png
+resources/crosshair/crosshair_slid_double_yellow_right.png
+resources/crosshair/crosshair_tip_overheart_chs.png
+resources/crosshair/crosshair_tip_overheart_en.png
+resources/icons
+resources/icons/blue_team.svg
+resources/icons/drone.svg
+resources/icons/engineer.svg
+resources/icons/hero.svg
+resources/icons/infantry.svg
+resources/icons/red_team.svg
+resources/icons/sentry.svg
+resources/images
+resources/images/MaskTips-Ad-320.png
+resources/images/app_icon.icns
+resources/images/app_icon.ico
+resources/images/app_icon.png
+resources/images/app_icon_512.png
+resources/images/base_bg_2026_fq_small.png
+resources/images/base_bg_2026_fq_small_blue_left.png
+resources/images/battlefield_background.svg
+resources/images/blue_base_blood
+resources/images/blue_base_blood/blue_base_blood_border.png
+resources/images/blue_base_blood/blue_base_blood_bottom.png
+resources/images/blue_base_blood/blue_base_blood_invincible.png
+resources/images/blue_base_blood/blue_base_blood_light.png
+resources/images/blue_base_blood/blue_base_blood_middle.png
+resources/images/blue_base_blood/blue_base_blood_middle_full.png
+resources/images/blue_base_blood/blue_base_blood_middle_lowhp_0.png
+resources/images/blue_base_blood/blue_base_blood_top.png
+resources/images/blue_base_blood/blue_base_blood_top_full.png
+resources/images/blue_robot_icon.png
+resources/images/blue_team_logo.png
+resources/images/blue_teammate_avatar_hero_adbuff.png
+resources/images/buffs_new
+resources/images/buffs_new/addhp_10.png
+resources/images/buffs_new/addhp_25.png
+resources/images/buffs_new/attack_300.png
+resources/images/buffs_new/buff_2022_attack15.png
+resources/images/buffs_new/cool_2.png
+resources/images/buffs_new/cool_3.png
+resources/images/buffs_new/cool_5.png
+resources/images/buffs_new/cool_up.png
+resources/images/buffs_new/debuff_100.png
+resources/images/buffs_new/debuff_15.png
+resources/images/buffs_new/debuff_20.png
+resources/images/buffs_new/debuff_25.png
+resources/images/buffs_new/debuff_30.png
+resources/images/buffs_new/debuff_40.png
+resources/images/buffs_new/defence_100.png
+resources/images/buffs_new/defence_25.png
+resources/images/buffs_new/defence_50.png
+resources/images/buffs_new/rune_big_2022.png
+resources/images/buffs_new/rune_normal_15.png
+resources/images/buffs_new/terrain_fly_green.png
+resources/images/buffs_new/terrain_highground_green.png
+resources/images/buffs_new/terrain_tunnel_ac.png
+resources/images/buffs_new/terrain_tunnel_b.png
+resources/images/controlzone_blue_icon.png
+resources/images/controlzone_red_icon.png
+resources/images/crosshair
+resources/images/crosshair/crosshair_Yellow.png
+resources/images/crosshair/crosshair_attacked_down.png
+resources/images/crosshair/crosshair_attacked_left.png
+resources/images/crosshair/crosshair_attacked_right.png
+resources/images/crosshair/crosshair_attacked_up.png
+resources/images/crosshair/crosshair_bg_double.png
+resources/images/crosshair/crosshair_bg_single.png
+resources/images/crosshair/crosshair_border_left.png
+resources/images/crosshair/crosshair_border_right.png
+resources/images/crosshair/crosshair_middle.png
+resources/images/crosshair/crosshair_slid_circle_bg.png
+resources/images/crosshair/crosshair_slid_circle_red.png
+resources/images/crosshair/crosshair_slid_circle_white.png
+resources/images/crosshair/crosshair_slid_circle_yellow.png
+resources/images/crosshair/crosshair_slid_double_bg.png
+resources/images/crosshair/crosshair_slid_double_red_left.png
+resources/images/crosshair/crosshair_slid_double_red_right.png
+resources/images/crosshair/crosshair_slid_double_white_left.png
+resources/images/crosshair/crosshair_slid_double_white_right.png
+resources/images/crosshair/crosshair_slid_double_yellow_left.png
+resources/images/crosshair/crosshair_slid_double_yellow_right.png
+resources/images/crosshair/crosshair_tip_overheart_chs.png
+resources/images/crosshair/crosshair_tip_overheart_en.png
+resources/images/damage_icon.png
+resources/images/dart_middle_blue.png
+resources/images/dart_middle_red.png
+resources/images/fudan_logo.svg
+resources/images/gamephase
+resources/images/gamephase/MaskTips-Ad-320.png
+resources/images/gamephase/MaskTips-Ad-Yellow-320.png
+resources/images/gamephase/freeze_1.png
+resources/images/gamephase/freeze_2.png
+resources/images/gamephase/freeze_3.png
+resources/images/gamephase/freeze_4.png
+resources/images/gamephase/freeze_5.png
+resources/images/gamephase/freeze_start.png
+resources/images/gamephase/gamestatus_cyan.png
+resources/images/gamephase/gamestatus_red.png
+resources/images/gamephase/gamestatus_yellow.png
+resources/images/gamestatus_cyan.png
+resources/images/gamestatus_red.png
+resources/images/gamestatus_yellow.png
+resources/images/message
+resources/images/message/blue_message_outpost.png
+resources/images/message/blue_message_outpost_dead.png
+resources/images/message/blue_validate_outpost.png
+resources/images/message/blue_wingman_outpost.png
+resources/images/message/blue_wingman_outpost_alive.png
+resources/images/message/blue_wingman_outpost_dead.png
+resources/images/message/controlzone_blue_icon.png
+resources/images/message/controlzone_gray_icon.png
+resources/images/message/controlzone_red_icon.png
+resources/images/message/message_blue.png
+resources/images/message/message_green.png
+resources/images/message/message_kill.png
+resources/images/message/message_red.png
+resources/images/message/red_message_outpost.png
+resources/images/message/red_message_outpost_dead.png
+resources/images/message/red_wingman_outpost.png
+resources/images/message/red_wingman_outpost_alive.png
+resources/images/message/red_wingman_outpost_dead.png
+resources/images/message/validate_icon_hp.png
+resources/images/message/validate_icon_killcount.png
+resources/images/message/validate_icon_rune.png
+resources/images/message/validate_icon_totalhurt.png
+resources/images/message/warning_box.png
+resources/images/minimap
+resources/images/minimap/blue_map_Interchange_station.png
+resources/images/minimap/blue_map_airplane.png
+resources/images/minimap/blue_map_arrow.png
+resources/images/minimap/blue_map_base.png
+resources/images/minimap/blue_map_base_animation_1.png
+resources/images/minimap/blue_map_base_animation_2.png
+resources/images/minimap/blue_map_base_animation_3.png
+resources/images/minimap/blue_map_base_animation_4.png
+resources/images/minimap/blue_map_base_area.png
+resources/images/minimap/blue_map_dart_launch.png
+resources/images/minimap/blue_map_guard(1).png
+resources/images/minimap/blue_map_guard.png
+resources/images/minimap/blue_map_outpost.png
+resources/images/minimap/blue_map_outpost_bg.png
+resources/images/minimap/blue_map_robot.png
+resources/images/minimap/blue_map_robot_lockbg.png
+resources/images/minimap/ic_fpv_map_cursor_attack.svg
+resources/images/minimap/ic_fpv_map_cursor_defense.svg
+resources/images/minimap/ic_fpv_map_cursor_warning.svg
+resources/images/minimap/map_island_active.png
+resources/images/minimap/map_island_blue.png
+resources/images/minimap/map_island_counting.png
+resources/images/minimap/map_island_red.png
+resources/images/minimap/map_robot_id_1.png
+resources/images/minimap/map_robot_id_2.png
+resources/images/minimap/map_robot_id_3.png
+resources/images/minimap/map_robot_id_4.png
+resources/images/minimap/map_robot_id_5.png
+resources/images/minimap/map_robot_lockline.png
+resources/images/minimap/red_map_Interchange_station.png
+resources/images/minimap/red_map_airplane.png
+resources/images/minimap/red_map_arrow.png
+resources/images/minimap/red_map_base.png
+resources/images/minimap/red_map_base_animation_1.png
+resources/images/minimap/red_map_base_animation_2.png
+resources/images/minimap/red_map_base_animation_3.png
+resources/images/minimap/red_map_base_animation_4.png
+resources/images/minimap/red_map_base_area.png
+resources/images/minimap/red_map_dart_launch.png
+resources/images/minimap/red_map_guard(1).png
+resources/images/minimap/red_map_guard.png
+resources/images/minimap/red_map_outpost.png
+resources/images/minimap/red_map_outpost_bg.png
+resources/images/minimap/red_map_robot.png
+resources/images/minimap/red_map_robot_lockbg.png
+resources/images/minimap/self_map_arrow.png
+resources/images/minimap/self_map_robot.png
+resources/images/minimap/self_map_robot_lockbg.png
+resources/images/minimap_bg.png
+resources/images/my_robot
+resources/images/my_robot/airplane_statusbar_bullet.png
+resources/images/my_robot/airplane_statusbar_bullet_bg.png
+resources/images/my_robot/airplane_statusbar_cover.png
+resources/images/my_robot/airplane_statusbar_h_bg.png
+resources/images/my_robot/airplane_statusbar_h_unable.png
+resources/images/my_robot/airplane_statusbar_slid_bg.png
+resources/images/my_robot/airplane_statusbar_slid_less300.png
+resources/images/my_robot/airplane_statusbar_slid_more300.png
+resources/images/my_robot/blood_addbuff.png
+resources/images/my_robot/blood_invincible.png
+resources/images/my_robot/blue_airplane_statusbar_avatar.png
+resources/images/my_robot/blue_statusbar_avatar_empty.png
+resources/images/my_robot/blue_statusbar_avatar_enginner.png
+resources/images/my_robot/blue_statusbar_avatar_enginner_invincible.png
+resources/images/my_robot/blue_statusbar_avatar_hero.png
+resources/images/my_robot/blue_statusbar_avatar_hero_invincible.png
+resources/images/my_robot/blue_statusbar_avatar_infantry.png
+resources/images/my_robot/blue_statusbar_avatar_infantry_invincible.png
+resources/images/my_robot/blue_statusbar_blood_background.png
+resources/images/my_robot/blue_statusbar_blood_slid.png
+resources/images/my_robot/blue_statusbar_blood_slid_addbuff.png
+resources/images/my_robot/blue_statusbar_blood_slid_low.png
+resources/images/my_robot/blue_statusbar_expbar_bg.png
+resources/images/my_robot/blue_statusbar_id_border.png
+resources/images/my_robot/blue_statusbar_level_1.png
+resources/images/my_robot/blue_statusbar_level_10.png
+resources/images/my_robot/blue_statusbar_level_2.png
+resources/images/my_robot/blue_statusbar_level_3.png
+resources/images/my_robot/blue_statusbar_level_4.png
+resources/images/my_robot/blue_statusbar_level_5.png
+resources/images/my_robot/blue_statusbar_level_6.png
+resources/images/my_robot/blue_statusbar_level_7.png
+resources/images/my_robot/blue_statusbar_level_8.png
+resources/images/my_robot/blue_statusbar_level_9.png
+resources/images/my_robot/buff_2020_addhp_5.png
+resources/images/my_robot/buff_2022_cool_2.png
+resources/images/my_robot/combat_icon.png
+resources/images/my_robot/outofcombat_icon.png
+resources/images/my_robot/red_airplane_statusbar_avatar.png
+resources/images/my_robot/red_statusbar_avatar_empty.png
+resources/images/my_robot/red_statusbar_avatar_enginner.png
+resources/images/my_robot/red_statusbar_avatar_enginner_invincible.png
+resources/images/my_robot/red_statusbar_avatar_hero.png
+resources/images/my_robot/red_statusbar_avatar_hero_invincible.png
+resources/images/my_robot/red_statusbar_avatar_infantry.png
+resources/images/my_robot/red_statusbar_avatar_infantry_invincible.png
+resources/images/my_robot/red_statusbar_blood_background.png
+resources/images/my_robot/red_statusbar_blood_slid.png
+resources/images/my_robot/red_statusbar_blood_slid_addbuff.png
+resources/images/my_robot/red_statusbar_blood_slid_low.png
+resources/images/my_robot/red_statusbar_expbar_bg.png
+resources/images/my_robot/red_statusbar_id_border.png
+resources/images/my_robot/red_statusbar_level_1.png
+resources/images/my_robot/red_statusbar_level_10.png
+resources/images/my_robot/red_statusbar_level_2.png
+resources/images/my_robot/red_statusbar_level_3.png
+resources/images/my_robot/red_statusbar_level_4.png
+resources/images/my_robot/red_statusbar_level_5.png
+resources/images/my_robot/red_statusbar_level_6.png
+resources/images/my_robot/red_statusbar_level_7.png
+resources/images/my_robot/red_statusbar_level_8.png
+resources/images/my_robot/red_statusbar_level_9.png
+resources/images/my_robot/statusbar_bullet_border.png
+resources/images/my_robot/statusbar_bullet_icon.png
+resources/images/my_robot/statusbar_bullet_icon_red.png
+resources/images/my_robot/statusbar_energy.png
+resources/images/my_robot/statusbar_energy_background.png
+resources/images/my_robot/statusbar_expbar.png
+resources/images/my_robot/statusbar_signallamp_full.png
+resources/images/my_robot/statusbar_signallamp_green_single.png
+resources/images/my_robot/statusbar_signallamp_high.png
+resources/images/my_robot/statusbar_signallamp_low.png
+resources/images/my_robot/statusbar_signallamp_middle.png
+resources/images/my_robot/statusbar_signallamp_red_single.png
+resources/images/my_robot/statusbar_signallamp_yellow_single.png
+resources/images/my_robot/statusbar_warning_red.png
+resources/images/my_robot/statusbar_warning_yellow.png
+resources/images/panel
+resources/images/panel/17.png
+resources/images/panel/42.png
+resources/images/panel/Tips_bg_2x.png
+resources/images/panel/ic_gold mine.png
+resources/images/panel/ic_gold_2x.png
+resources/images/panel/ic_silver mine.png
+resources/images/panel/map_island_blue.png
+resources/images/panel/map_island_red.png
+resources/images/panel/setting_arrow.png
+resources/images/panel/skillup_icon_blood.png
+resources/images/panel/sundry_bullet.png
+resources/images/panel/sundry_golf.png
+resources/images/panel/sundry_icon.png
+resources/images/panel/sundry_offline.png
+resources/images/panel/sundry_online.png
+resources/images/popup_bg.png
+resources/images/prep_phase_frame.png
+resources/images/red_base_blood
+resources/images/red_base_blood/red_base_blood_border.png
+resources/images/red_base_blood/red_base_blood_bottom.png
+resources/images/red_base_blood/red_base_blood_invincible.png
+resources/images/red_base_blood/red_base_blood_light.png
+resources/images/red_base_blood/red_base_blood_middle.png
+resources/images/red_base_blood/red_base_blood_middle_full.png
+resources/images/red_base_blood/red_base_blood_middle_lowhp_0.png
+resources/images/red_base_blood/red_base_blood_top.png
+resources/images/red_base_blood/red_base_blood_top_full.png
+resources/images/red_message_guard.png
+resources/images/red_robot_icon.png
+resources/images/red_team_logo.png
+resources/images/resultpanel
+resources/images/resultpanel/abnormal_termination_zh
+resources/images/resultpanel/abnormal_termination_zh/termination_Zh (22).png
+resources/images/resultpanel/abnormal_termination_zh/termination_Zh (23).png
+resources/images/resultpanel/abnormal_termination_zh/termination_Zh (24).png
+resources/images/resultpanel/abnormal_termination_zh/termination_Zh (25).png
+resources/images/resultpanel/abnormal_termination_zh/termination_Zh (26).png
+resources/images/resultpanel/abnormal_termination_zh/termination_Zh (27).png
+resources/images/resultpanel/abnormal_termination_zh/termination_Zh (28).png
+resources/images/resultpanel/blue_win_zh
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (100).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (101).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (102).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (103).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (104).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (105).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (106).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (107).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (108).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (109).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (110).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (111).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (112).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (113).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (114).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (115).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (116).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (117).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (118).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (119).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (120).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (121).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (122).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (123).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (124).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (125).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (126).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (127).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (128).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (129).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (130).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (131).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (132).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (133).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (134).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (135).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (136).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (137).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (138).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (139).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (140).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (141).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (142).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (143).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (144).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (145).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (146).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (147).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (148).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (149).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (150).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (151).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (152).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (153).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (154).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (155).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (156).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (157).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (158).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (159).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (16).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (160).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (161).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (162).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (163).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (164).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (165).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (166).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (167).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (174).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (19).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (21).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (23).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (24).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (26).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (29).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (30).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (32).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (35).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (37).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (38).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (41).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (43).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (44).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (46).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (49).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (50).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (52).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (55).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (57).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (58).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (59).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (60).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (61).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (62).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (63).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (64).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (65).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (66).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (67).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (68).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (69).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (70).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (71).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (72).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (73).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (74).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (75).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (76).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (77).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (78).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (79).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (80).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (81).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (82).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (83).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (84).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (85).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (86).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (87).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (88).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (89).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (90).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (91).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (92).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (93).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (94).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (95).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (96).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (97).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (98).png
+resources/images/resultpanel/blue_win_zh/blueWin_Zh (99).png
+resources/images/resultpanel/red_win_zh
+resources/images/resultpanel/red_win_zh/redWin_Zh (100).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (101).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (102).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (103).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (104).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (105).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (106).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (107).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (108).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (109).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (110).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (111).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (112).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (113).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (114).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (115).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (116).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (117).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (118).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (119).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (120).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (121).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (122).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (123).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (124).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (125).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (126).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (127).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (128).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (129).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (130).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (131).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (132).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (133).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (134).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (135).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (136).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (137).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (138).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (139).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (140).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (141).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (142).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (143).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (144).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (145).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (146).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (147).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (148).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (149).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (150).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (151).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (152).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (153).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (154).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (155).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (156).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (157).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (158).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (159).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (160).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (161).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (162).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (163).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (164).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (165).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (166).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (167).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (17).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (174).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (18).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (20).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (22).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (25).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (27).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (28).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (31).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (33).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (34).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (36).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (39).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (40).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (42).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (45).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (47).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (48).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (51).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (53).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (54).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (56).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (59).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (60).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (61).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (62).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (63).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (64).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (65).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (66).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (67).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (68).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (69).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (70).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (71).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (72).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (73).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (74).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (75).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (76).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (77).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (78).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (79).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (80).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (81).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (82).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (83).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (84).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (85).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (86).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (87).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (88).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (89).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (90).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (91).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (92).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (93).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (94).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (95).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (96).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (97).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (98).png
+resources/images/resultpanel/red_win_zh/redWin_Zh (99).png
+resources/images/robot_avatar.png
+resources/images/robots
+resources/images/robots/blue_drone.png
+resources/images/robots/blue_engineer.png
+resources/images/robots/blue_hero.png
+resources/images/robots/blue_infantry.png
+resources/images/robots/blue_sentry.png
+resources/images/robots/red_drone.png
+resources/images/robots/red_engineer.png
+resources/images/robots/red_hero.png
+resources/images/robots/red_infantry.png
+resources/images/robots/red_sentry.png
+resources/images/rune_tab
+resources/images/rune_tab/key_able.png
+resources/images/rune_tab/key_unable.png
+resources/images/rune_tab/rune_tab_bg.png
+resources/images/rune_tab/rune_tab_blue.png
+resources/images/rune_tab/rune_tab_delimiter.png
+resources/images/rune_tab/rune_tab_hit.png
+resources/images/rune_tab/rune_tab_hitting.png
+resources/images/rune_tab/rune_tab_nothit.png
+resources/images/rune_tab/rune_tab_red.png
+resources/images/silo
+resources/images/silo/silo_background_1.png
+resources/images/silo/silo_background_2.png
+resources/images/silo/silo_border_big.png
+resources/images/silo/silo_border_green.png
+resources/images/silo/silo_border_normal.png
+resources/images/silo/silo_border_red.png
+resources/images/silo/silo_dartstate_background.png
+resources/images/silo/silo_defaultposition.png
+resources/images/silo/silo_defaultposition_en.png
+resources/images/silo/silo_endmovingposition.png
+resources/images/silo/silo_icon_aim.png
+resources/images/silo/silo_icon_darts.png
+resources/images/silo/silo_icon_speed.png
+resources/images/silo/silo_outpost.png
+resources/images/silo/silo_outpost_en.png
+resources/images/silo/silo_randomconstantposition.png
+resources/images/silo/silo_randomfixposition.png
+resources/images/silo/silo_randommovingposition.png
+resources/images/silo/silo_randomposition.png
+resources/images/silo/silo_randomposition_en.png
+resources/images/silo/tab_icon_silo.png
+resources/images/silo_icon_darts.png
+resources/images/sjtu_logo.svg
+resources/images/sundry_bullet.png
+resources/images/sundry_golf.png
+resources/images/sundry_icon.png
+resources/images/tab
+resources/images/tab/message_disconnect.png
+resources/images/tab/tab_header_hurt.png
+resources/images/tab/tab_level_1.png
+resources/images/tab/tab_level_10.png
+resources/images/tab/tab_level_2.png
+resources/images/tab/tab_level_3.png
+resources/images/tab/tab_level_4.png
+resources/images/tab/tab_level_5.png
+resources/images/tab/tab_level_6.png
+resources/images/tab/tab_level_7.png
+resources/images/tab/tab_level_8.png
+resources/images/tab/tab_level_9.png
+resources/images/tactical_camera_main_default.png
+resources/images/tactical_camera_preview_default.png
+resources/images/top_mid
+resources/images/top_mid/BattleVolumn_Bg.png
+resources/images/top_mid/blue_team_logo.png
+resources/images/top_mid/red_team_logo.png
+resources/images/top_mid/top_left_background.png
+resources/images/top_mid/top_middle_background.png
+resources/images/top_mid/top_middle_background_v2.png
+resources/images/top_mid/top_right_background.png
+resources/images/top_outpost
+resources/images/top_outpost/blue_outpost_avatar.png
+resources/images/top_outpost/blue_outpost_bg.png
+resources/images/top_outpost/blue_outpost_name.png
+resources/images/top_outpost/blue_outpost_panel.png
+resources/images/top_outpost/red_outpost_avatar.png
+resources/images/top_outpost/red_outpost_bg.png
+resources/images/top_outpost/red_outpost_name.png
+resources/images/top_outpost/red_outpost_panel.png
+resources/images/top_robots
+resources/images/top_robots/blue_guard_avatar.png
+resources/images/top_robots/blue_tab_bar.png
+resources/images/top_robots/blue_tab_guard.png
+resources/images/top_robots/blue_teammate_avatar_airplane.png
+resources/images/top_robots/blue_teammate_avatar_engineer.png
+resources/images/top_robots/blue_teammate_avatar_hero.png
+resources/images/top_robots/blue_teammate_avatar_soldier.png
+resources/images/top_robots/blue_teammate_bg.png
+resources/images/top_robots/blue_teammate_id_1.png
+resources/images/top_robots/blue_teammate_id_2.png
+resources/images/top_robots/blue_teammate_id_3.png
+resources/images/top_robots/blue_teammate_id_4.png
+resources/images/top_robots/blue_teammate_id_5.png
+resources/images/top_robots/blue_teammate_id_6.png
+resources/images/top_robots/levels
+resources/images/top_robots/levels/tab_level_1.png
+resources/images/top_robots/levels/tab_level_10.png
+resources/images/top_robots/levels/tab_level_2.png
+resources/images/top_robots/levels/tab_level_3.png
+resources/images/top_robots/levels/tab_level_4.png
+resources/images/top_robots/levels/tab_level_5.png
+resources/images/top_robots/levels/tab_level_6.png
+resources/images/top_robots/levels/tab_level_7.png
+resources/images/top_robots/levels/tab_level_8.png
+resources/images/top_robots/levels/tab_level_9.png
+resources/images/top_robots/red_guard_avatar.png
+resources/images/top_robots/red_tab_bar.png
+resources/images/top_robots/red_tab_guard.png
+resources/images/top_robots/red_teammate_avatar_airplane.png
+resources/images/top_robots/red_teammate_avatar_engineer.png
+resources/images/top_robots/red_teammate_avatar_hero.png
+resources/images/top_robots/red_teammate_avatar_soldier.png
+resources/images/top_robots/red_teammate_bg.png
+resources/images/top_robots/red_teammate_id_1.png
+resources/images/top_robots/red_teammate_id_2.png
+resources/images/top_robots/red_teammate_id_3.png
+resources/images/top_robots/red_teammate_id_4.png
+resources/images/top_robots/red_teammate_id_5.png
+resources/images/top_robots/red_teammate_id_6.png
+resources/images/warning_box.png
+resources/models
+resources/models/README.md
+resources/sounds
+resources/sounds/RUNE_VOICE_PLACEHOLDERS.md
+resources/sounds/air_support_laser_targeted.mp3
+resources/sounds/basedrop.mov
+resources/sounds/basedrop.mp3
+resources/sounds/dart_can_open.mov
+resources/sounds/dart_can_open.mp3
+resources/sounds/enemy_buyback_aerial_revived.mp3
+resources/sounds/enemy_buyback_engineer_revived.mp3
+resources/sounds/enemy_buyback_hero_revived.mp3
+resources/sounds/enemy_buyback_infantry_3_revived.mp3
+resources/sounds/enemy_buyback_infantry_4_revived.mp3
+resources/sounds/enemy_buyback_sentry_revived.mp3
+resources/sounds/enemy_dart_gate_open.wav
+resources/sounds/enemy_dart_open.mov
+resources/sounds/enemy_dart_open.mp3
+resources/sounds/enemy_dart_open.wav
+resources/sounds/occupation.mov
+resources/sounds/occupation.mp3
+resources/sounds/outpost_revive.m4a
+resources/sounds/outpost_revive.mp3
+resources/sounds/outpostdrop.mov
+resources/sounds/outpostdrop.mp3
+resources/sounds/rune_large_remaining_1.mp3
+resources/sounds/rune_large_remaining_2.mp3
+resources/sounds/rune_large_remaining_3.mp3
+resources/sounds/rune_small_remaining_1.mp3
+resources/sounds/rune_small_remaining_2.mp3
+resources/sounds/反制无人机第一次.mp3
+resources/sounds/反制无人机第三次.mp3
+resources/sounds/反制无人机第二次.mp3
+resources/sounds/我方基地护甲展开.mp3
+resources/styles
+resources/styles/dark_theme.qss
+resources/styles/main.qss
+resources/sundry_icon.png
+run_docker.sh
+run_test.sh
+scripts
+scripts/docker-audio-proxy.sh
+scripts/rm26-field-install.sh
+scripts/rm26-field-launch.sh
+scripts/rm26-field.desktop
+scripts/rm26-recording-install.sh
+scripts/rm26-recording.sh
+sim
+sim/.python-version
+sim/README.md
+sim/__init__.py
+sim/pyproject.toml
+sim/requirements.txt
+sim/robomaster_pb2.py
+sim/run_sim.sh
+sim/server.py
+sim/server
+sim/server/__init__.py
+sim/server/config.json
+sim/server/crc.py
+sim/server/hevc_annexb.py
+sim/server/industrial_camera_streamer.py
+sim/server/main.py
+sim/server/match_simulation_engine.py
+sim/server/mqtt_publisher.py
+sim/server/proto
+sim/server/proto/__init__.py
+sim/server/protocol.py
+sim/server/state_manager.py
+sim/server/static
+sim/server/static/app.js
+sim/server/static/index.html
+sim/server/static/map_geometry.js
+sim/server/static/minimap_bg.png
+sim/server/static/style.css
+sim/server/static/vendor
+sim/server/static/vendor/LICENSE.socket.io-4.5.4.txt
+sim/server/static/vendor/LICENSE.vue-2.7.14.txt
+sim/server/static/vendor/socket.io.min.js
+sim/server/static/vendor/vue.min.js
+sim/server/udp_receiver.py
+sim/server/udp_sender.py
+sim/server/video_streamer.py
+sim/tests
+sim/tests/__init__.py
+sim/tests/test_map_geometry.js
+sim/tests/test_match_simulation_engine.py
+sim/tests/test_protocol_contract.py
+sim/tests/test_run_sim_contract.py
+src
+src/config
+src/config/ConfigLoader.cpp
+src/config/ConfigLoader.h
+src/config/ConfigManager.cpp
+src/config/ConfigManager.h
+src/config/ConfigValidator.cpp
+src/config/ConfigValidator.h
+src/core
+src/core/CustomDataTypes.h
+src/core/DataFreshnessGuard.cpp
+src/core/DataFreshnessGuard.h
+src/core/ExecutionFusion.cpp
+src/core/ExecutionFusion.h
+src/core/GameConstants.h
+src/core/GameData.cpp
+src/core/GameData.h
+src/core/LogFileNaming.cpp
+src/core/LogFileNaming.h
+src/core/MapCoordinateMapper.cpp
+src/core/MapCoordinateMapper.h
+src/core/PopupStateMachine.cpp
+src/core/PopupStateMachine.h
+src/core/PopupTypes.h
+src/core/TacticalAnalyzer.cpp
+src/core/TacticalAnalyzer.h
+src/core/TacticalConfig.h
+src/core/TacticalSnapshot.h
+src/core/TargetTracker.cpp
+src/core/TargetTracker.h
+src/core/ThreatRanker.cpp
+src/core/ThreatRanker.h
+src/core/TimedEventRules.cpp
+src/core/TimedEventRules.h
+src/core/YoloDetector.cpp
+src/core/YoloDetector.h
+src/devhooks
+src/devhooks/ClientDevHooks.cpp
+src/devhooks/ClientDevHooks.h
+src/main.cpp
+src/network
+src/network/CRC.cpp
+src/network/CRC.h
+src/network/H264AnnexB.cpp
+src/network/H264AnnexB.h
+src/network/H264Decoder.cpp
+src/network/H264Decoder.h
+src/network/H264StreamRecoveryPolicy.cpp
+src/network/H264StreamRecoveryPolicy.h
+src/network/HevcDecoder.cpp
+src/network/HevcDecoder.h
+src/network/MqttClient.cpp
+src/network/MqttClient.h
+src/network/MqttLogger.cpp
+src/network/MqttLogger.h
+src/network/MqttManager.cpp
+src/network/MqttManager.h
+src/network/NetworkManager.cpp
+src/network/NetworkManager.h
+src/network/Protocol.cpp
+src/network/Protocol.h
+src/network/S1ProtocolManager.cpp
+src/network/S1ProtocolManager.h
+src/network/VideoDatagramLogger.cpp
+src/network/VideoDatagramLogger.h
+src/network/VideoReceiver.cpp
+src/network/VideoReceiver.h
+src/network/proto
+src/network/proto/protocol_manifest.json
+src/network/proto/robomaster.proto
+src/qml
+src/qml/ActionButton.qml
+src/qml/AmmoSupplyPanel.qml
+src/qml/AuxiliaryShootingPanel.qml
+src/qml/BaseHealthBar.qml
+src/qml/BattlePausePopup.qml
+src/qml/CentralAimingHUD.qml
+src/qml/Countdown.qml
+src/qml/CustomUI
+src/qml/CustomUI/ChassisModePanel.qml
+src/qml/CustomUI/FrictionWheelStatus.qml
+src/qml/CustomUI/GimbalAngleIndicator.qml
+src/qml/CustomUI/GunnerOverlay.qml
+src/qml/CustomUI/SuperCapacitorBar.qml
+src/qml/DamagePanel.qml
+src/qml/DeployModePanel.qml
+src/qml/Disconnected.qml
+src/qml/EventMessagePanel.qml
+src/qml/ExchangePanel.qml
+src/qml/ExchangePanelAerial.qml
+src/qml/ExchangePanelEngineer.qml
+src/qml/FpsDisplay.qml
+src/qml/HeroVideo.qml
+src/qml/LeftBottomPanel.qml
+src/qml/MessageNotificationPanel.qml
+src/qml/MiniMap.qml
+src/qml/ModuleStatusPanel.qml
+src/qml/OfficialEventPopup.qml
+src/qml/Out.qml
+src/qml/OutpostStatusBadge.qml
+src/qml/PopupOverlay.qml
+src/qml/PrepPhasePopup.qml
+src/qml/Punished.qml
+src/qml/RobotRespawn.qml
+src/qml/RobotStatsRow.qml
+src/qml/RobotStatsTable.qml
+src/qml/RobotStatusItem.qml
+src/qml/RuneInteractionPanel.qml
+src/qml/SettingsPanel.qml
+src/qml/SiloControlPanel.qml
+src/qml/TabStatsPanel.qml
+src/qml/Tactical
+src/qml/Tactical/AllyCriticalStatusPanel.qml
+src/qml/Tactical/HologramLockOverlay.qml
+src/qml/Tactical/KeyEventChainPanel.qml
+src/qml/Tactical/MainDecisionConsole.qml
+src/qml/Tactical/PredictionPanel.qml
+src/qml/Tactical/ResourceSummaryBar.qml
+src/qml/Tactical/TacticalCommandPage.qml
+src/qml/Tactical/TacticalEventPopup.qml
+src/qml/Tactical/TacticalHeader.qml
+src/qml/Tactical/TacticalLargeMapOverlay.qml
+src/qml/Tactical/TacticalMock.qml
+src/qml/Tactical/TacticalRadarMap.qml
+src/qml/Tactical/TacticalVideoStage.qml
+src/qml/Tactical/TargetInfoCard.qml
+src/qml/Tactical/TargetRankPanel.qml
+src/qml/Tactical/components
+src/qml/Tactical/components/BaseHealthWing.qml
+src/qml/Tactical/components/BattleAnalysisPanel.qml
+src/qml/Tactical/components/BattleEventPanel.qml
+src/qml/Tactical/components/CameraPreviewPanel.qml
+src/qml/Tactical/components/HudPanel.qml
+src/qml/Tactical/components/RobotListPanel.qml
+src/qml/Tactical/components/RobotStatusRow.qml
+src/qml/Tactical/components/TopLogisticsStrip.qml
+src/qml/TopInfoBar.qml
+src/qml/qml.qrc
+src/qml/qmldir
+src/simulator
+src/simulator/ProtocolSimulator.cpp
+src/simulator/ProtocolSimulator.h
+src/ui
+src/ui/ExchangeCommandPolicy.cpp
+src/ui/ExchangeCommandPolicy.h
+src/ui/InputHotkeyPolicy.cpp
+src/ui/InputHotkeyPolicy.h
+src/ui/LayoutConstants.h
+src/ui/MainWindow.cpp
+src/ui/MainWindow.h
+src/ui/MainWindowStatePolicy.h
+src/ui/PopupOverlayPolicy.cpp
+src/ui/PopupOverlayPolicy.h
+src/widgets
+src/widgets/AROverlayManager.cpp
+src/widgets/AROverlayManager.h
+src/widgets/AROverlayWidget.cpp
+src/widgets/AROverlayWidget.h
+src/widgets/BattleMessageWidget.cpp
+src/widgets/BattleMessageWidget.h
+src/widgets/CrosshairWidget.cpp
+src/widgets/CrosshairWidget.h
+src/widgets/DebugLogWidget.h
+src/widgets/GameResultWidget.cpp
+src/widgets/GameResultWidget.h
+src/widgets/HealthBarWidget.cpp
+src/widgets/HealthBarWidget.h
+src/widgets/HeatRingWidget.cpp
+src/widgets/HeatRingWidget.h
+src/widgets/HelpOverlayWidget.cpp
+src/widgets/HelpOverlayWidget.h
+src/widgets/HeroVideoWidget.cpp
+src/widgets/HeroVideoWidget.h
+src/widgets/InfoPanel.cpp
+src/widgets/InfoPanel.h
+src/widgets/MiniMapWidget.cpp
+src/widgets/MiniMapWidget.h
+src/widgets/OperationsPanel.cpp
+src/widgets/OperationsPanel.h
+src/widgets/RobotStatusPanel.cpp
+src/widgets/RobotStatusPanel.h
+src/widgets/RobotStatusWidget.cpp
+src/widgets/RobotStatusWidget.h
+src/widgets/VideoBackgroundWidget.cpp
+src/widgets/VideoBackgroundWidget.h
+tests
+tests/CMakeLists.txt
+tests/benchmark
+tests/benchmark/test_benchmark.cpp
+tests/test_game_data.cpp
+tests/test_mqtt_parsing.cpp
+tests/test_proto_build.cpp
+tests/test_protobuf.cpp
+tests/unit
+tests/unit/test_config_manager_video.cpp
+tests/unit/test_crc.cpp
+tests/unit/test_docker_audio_proxy.sh
+tests/unit/test_exchange_command_policy.cpp
+tests/unit/test_game_data.cpp
+tests/unit/test_game_result_widget.cpp
+tests/unit/test_h264_annex_b.cpp
+tests/unit/test_h264_decoder.cpp
+tests/unit/test_h264_stream_recovery_policy.cpp
+tests/unit/test_health_bar.cpp
+tests/unit/test_input_hotkey_policy.cpp
+tests/unit/test_linux_sim_dependency_hint.sh
+tests/unit/test_log_file_naming.cpp
+tests/unit/test_mainwindow_metaobject.cpp
+tests/unit/test_mainwindow_state_policy.cpp
+tests/unit/test_mainwindow_tactical_hotkey_integration.cpp
+tests/unit/test_mqtt_manager.cpp
+tests/unit/test_popup_overlay_policy.cpp
+tests/unit/test_protobuf.cpp
+tests/unit/test_protocol.cpp
+tests/unit/test_run_docker_base_image.sh
+tests/unit/test_run_docker_field.sh
+tests/unit/test_settings_panel_shortcuts.cpp
+tests/unit/test_tactical_analyzer.cpp
+tests/unit/test_tactical_command_page.cpp
+tests/unit/test_timed_event_rules.cpp
+tests/unit/test_video_background_widget.cpp
+tests/unit/test_video_datagram_logger.cpp
+tools
+tools/mqtt_listen.py
+tools/release
+tools/release/README.md
+tools/release/check_docs.py
+tools/release/check_example_config.py
+tools/release/check_media_metadata.py
+tools/release/check_packaging_readiness.py
+tools/release/check_public_readiness.py
+tools/release/check_qml_lint.py
+tools/release/check_runtime_resources.py
+tools/release/check_sim_protobuf_runtime.py
+tools/release/check_version_contract.py
+tools/release/generate_checksums.py
+tools/release/generate_sim_protobuf.py
+tools/release/generate_source_sbom.py
+tools/release/packaging_policy.json
+tools/release/public_assets.json
+tools/release/public_media_metadata.json
+tools/release/public_paths.json
+tools/release/qml_lint_policy.json
+tools/release/runtime_resources.json
+tools/release/tests
+tools/release/tests/test_check_docs.py
+tools/release/tests/test_check_example_config.py
+tools/release/tests/test_check_media_metadata.py
+tools/release/tests/test_check_packaging_readiness.py
+tools/release/tests/test_check_public_readiness.py
+tools/release/tests/test_check_qml_lint.py
+tools/release/tests/test_check_runtime_resources.py
+tools/release/tests/test_check_sim_protobuf_runtime.py
+tools/release/tests/test_check_version_contract.py
+tools/release/tests/test_generate_checksums.py
+tools/release/tests/test_generate_sim_protobuf.py
+tools/release/tests/test_generate_source_sbom.py
+tools/release/version_policy.json
+tools/ssh_engine.sh
+tools/video_sender.py
+tools/yolo_training
+tools/yolo_training/download_dataset.py
+tools/yolo_training/export_onnx.py
+tools/yolo_training/requirements.txt
+tools/yolo_training/train.py
+videoplayer.sh

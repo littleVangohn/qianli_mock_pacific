@@ -687,7 +687,7 @@ void MainWindow::initializeCore() {
           &MainWindow::flushArmPosition);
   m_armForwardTimer->start();
 
-  // 自定义控制器经 USB-RS485 直连上位机，34 字节定长帧。
+  // 自定义控制器经 USB-RS232 直连上位机，34 字节定长帧。
   m_armSerialLink = new RM::ArmSerialLink(this);
   connect(m_armSerialLink, &RM::ArmSerialLink::positionReceived, this,
           &MainWindow::onArmPositionReceived);
@@ -5548,7 +5548,7 @@ bool MainWindow::handleKeyboardMouseControlKey(QKeyEvent *event,
       canUseKeyboardMouseControl() && !isKeyboardMouseControlBlocked();
 
   // Z 是点击切换，不是按住：上升沿在本地切换机械臂控制状态，并立刻向
-  // 下位机主控发一帧模式帧（0x0311），同时把模式帧写回 RS-485 自定义控制器。
+  // 下位机主控发一帧模式帧（0x0311），同时把模式帧写回 RS-232 自定义控制器。
   // 该位仍照常进入 keyboard_value，电控可以忽略，以 0x0311 为准。
   // 只认裸 Z，Ctrl+Z 等组合键不触发，避免和本地快捷键冲突。
   if (bit == 11 && pressed && !keyWasDown && available &&
@@ -5910,7 +5910,7 @@ void MainWindow::flushOutpostForward() {
 //               0          = 自定义控制状态
 //               0x7FFFFFFF = 视觉自动控制状态
 //               其他值     = 自定义控制器自己的相对时间，客户端不改
-// 自定义控制器经 USB-RS485 直连上位机，34 字节帧（16 字节头 + position[16:34)），
+// 自定义控制器经 USB-RS232 直连上位机，34 字节帧（16 字节头 + position[16:34)），
 // ArmSerialLink 提取 position 后由本类按 50 Hz 持续发到 0x0311。
 // 视觉自动状态下持续发 relative_time = INT_MAX 的状态帧；自定义控制状态下
 // 持续重发串口最新 position（没有新数据就重复最后一帧，relative_time 不前进，
@@ -5995,7 +5995,7 @@ void MainWindow::toggleArmControlMode() {
   m_networkManager->sendData(modeFrame, QHostAddress::LocalHost, 0);
   ++m_armPositionFramesSent;
 
-  // 同时写回自定义控制器（RS-485）；连写 3 帧覆盖串口偶发误码。
+  // 同时写回自定义控制器（RS-232）；连写 3 帧覆盖串口偶发误码。
   if (m_armSerialLink && m_armSerialLink->isOpen()) {
     for (int i = 0; i < 3; ++i) {
       m_armSerialLink->writeModeFrame(modePosition);

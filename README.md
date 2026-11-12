@@ -238,15 +238,15 @@ pkt = struct.pack('<BBBBhhhBB',
 | 14–17 | `relative_time` | uint32 | `0` = 自定义控制；`INT_MAX` = 视觉自动控制 |
 
 - 视觉自动控制：持续发关节角全 0、`relative_time = 0x7FFFFFFF` 的状态帧。
-- 自定义控制：把 RS-485 收到的最新 position 按 50 Hz 持续转发，`relative_time` 由
+- 自定义控制：把 RS-232 收到的最新 position 按 50 Hz 持续转发，`relative_time` 由
   自定义控制器填写；串口 300 ms 没有新帧时继续重发最后一帧并打
   `RM26_ARM_POSITION_STALE`，所以 `relative_time` 不再推进，主控要据此做失联保护。
 - Z 是**点击切换**，不是按住。切换时立即发一帧模式帧（`0` 或 `INT_MAX`，
   角度全 0，主控只按 `relative_time` 切状态），随后由 50 Hz 持续发送维持。
-- 自定义控制器经 **USB-RS485 直连上位机**，34 字节定长帧：16 字节通信头
+- 自定义控制器经 **USB-RS232 直连上位机**（全双工点对点），34 字节定长帧：16 字节通信头
   （客户端接收忽略、发送填 0）+ `position[16:34)`。端口/波特率用
   `RM_ARM_SERIAL_PORT` / `RM_ARM_SERIAL_BAUD` 配置，默认 115200 8N1。
-- 切换帧同时写回自定义控制器（RS-485 连写 3 帧）；客户端只在已登录、非战术模式、
+- 切换帧同时写回自定义控制器（RS-232 连写 3 帧）；客户端只在已登录、非战术模式、
   MQTT 已连接时响应 Z。
 - `0x0311` 单条上限 30 字节、75 Hz，每辆车链路独立；18 字节裸载荷与前哨站 10 字节
   消息按长度区分（18 = 机械臂，10 = 前哨站）。前哨站 10 Hz + 机械臂 50 Hz = 60 Hz。
@@ -269,8 +269,8 @@ pkt = struct.pack('<BBBBhhhBB',
 | `RM_MQTT_PORT` | 覆盖 MQTT 端口（默认配置 3333） |
 | `RM_ENGINE_ARMOR_LOG_DIR` | 引擎装甲日志目录 |
 | `RM_CLIENT_ROBOT_ID` | 覆盖机器人编号 |
-| `RM_ARM_SERIAL_PORT` | 自定义控制器 RS-485 串口（如 `/dev/ttyUSB0`、`COM5`）；不设则关闭机械臂串口输入 |
-| `RM_ARM_SERIAL_BAUD` | RS-485 波特率，默认 115200 |
+| `RM_ARM_SERIAL_PORT` | 自定义控制器 RS-232 串口（如 `/dev/ttyUSB0`、`COM5`）；不设则关闭机械臂串口输入 |
+| `RM_ARM_SERIAL_BAUD` | RS-232 波特率，默认 115200 |
 | `RM_ARM_SERIAL_MAGIC` | 帧头魔数（如 `0xA5`），用于串口重新同步；不设则按 34 字节固定切帧 |
 | `RM26_BUILD_DIR` | 构建目录（默认 `~/rm26-build`） |
 

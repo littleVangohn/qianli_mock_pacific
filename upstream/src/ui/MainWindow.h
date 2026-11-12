@@ -54,7 +54,7 @@ class DataFreshnessGuard;
 class MapCoordinateMapper;
 class ThreatRanker;
 class ExecutionFusion;
-class ArmSerialLink; // 自定义控制器 RS-485 串口
+class ArmSerialLink; // 自定义控制器 RS-232 串口
 }
 #include "../widgets/VideoBackgroundWidget.h"
 #include "../widgets/GameResultWidget.h"
@@ -610,7 +610,7 @@ private:
 
   // 机械臂：Z 切换自定义控制 / 视觉自动控制
   bool m_armCustomControlActive = false;
-  ArmSerialLink *m_armSerialLink = nullptr; // 自定义控制器 RS-485
+  ArmSerialLink *m_armSerialLink = nullptr; // 自定义控制器 RS-232
   QByteArray m_lastArmPosition;    // 串口收到的最新 position（18 字节）
   QByteArray m_armVisionFrame;     // 视觉自动状态帧（18 字节，持续发送）
   qint64 m_armLastPositionMs = 0;  // 最近一次收到 position 的时间

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 /**
  * @file RobotArmProtocol.h
- * @brief 机械臂自定义控制协议（0x0311 + RS-485）
+ * @brief 机械臂自定义控制协议（0x0311 + RS-232）
  * @details 两个方向：
  *          - 客户端 → 下位机主控：MQTT CustomControl → 0x0311，data 为 18 字节 position。
- *          - 自定义控制器 ↔ 客户端：RS-485 串口，34 字节整帧，
+ *          - 自定义控制器 ↔ 客户端：RS-232 串口，34 字节整帧，
  *            [0:16) 为通信头（客户端忽略），[16:34) 为 position。
  *
  *          position（packed、小端）：

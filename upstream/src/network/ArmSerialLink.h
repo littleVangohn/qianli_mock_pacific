@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 /**
  * @file ArmSerialLink.h
- * @brief 自定义控制器 RS-485 串口链路
- * @details 自定义控制器通过 USB-RS485 直连上位机，按 34 字节定长帧收发：
+ * @brief 自定义控制器 RS-232 串口链路
+ * @details 自定义控制器通过 USB-RS232 直连上位机，按 34 字节定长帧收发：
  *            [0:16)  通信头（客户端忽略，发送时填 0）
  *            [16:34) 机械臂 position（7×uint16 + uint32，小端）
  *          接收到的 position 由 MainWindow 持续转发到 CustomControl（0x0311）；

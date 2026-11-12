@@ -145,34 +145,5 @@ pkt += bytes([module_status])
 - **图传周期性卡顿**：WSL 内核 UDP 接收缓冲太小，执行
   `sudo sysctl -w net.core.rmem_max=16777216`。
 - **机器人不注册 / 日志 offline**：裁判系统栈没起，或热点 ICS 占用了 UDP 端口段。
-- **自定义客户端起不来**：确认 `~/rm26-build/RoboMasterClient2025` 存在；
+- **自定义客户端起不来**：确认 `~/rm26-build/RoboMasterClient2025` 存在
   外部启动脚本和 `run.sh` 都依赖这个固定路径和文件名。
-
-## 来源与许可
-
-客户端基于复旦大学星云 EGA 战队的 RM26_Client 修改而来，原项目采用 MIT 许可。
-按本仓库精简要求未保留独立的 LICENSE 文件，MIT 许可声明全文如下：
-
-```text
-MIT License
-
-Copyright (c) 2025-2026 Fudan University EGA Team (复旦大学星云 EGA 机器人战队)
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-```

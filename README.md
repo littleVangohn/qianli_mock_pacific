@@ -1,8 +1,9 @@
 # cquqianli_mock
 
 RoboMaster 2026 自定义客户端（Qt 6 / C++17 / QML），运行在 WSL Ubuntu 22.04。
-数据来自官方选手端的 MQTT broker（:3333），图传来自官方选手端的 UDP（:3334），
-电控状态经 0x0310 → 图传链路 → `CustomByteBlock` 进入客户端。
+数据来自官方选手端的 MQTT broker（:3333），图传来自官方选手端的 UDP（:3334）。
+电控状态经 `0x0310` → 图传链路 → MQTT `CustomByteBlock` 进入客户端；
+键鼠控制沿反方向经 MQTT `KeyboardMouseControl` → 图传 → 21 字节遥控帧下发到电控。
 
 ## 快速开始
 
@@ -59,28 +60,46 @@ cquqianli_mock/
 `upstream/config.json` 是本机现场配置（IP / 机器人编号），已被 `.gitignore`
 忽略；首次运行 `run.sh` 会从 `config.example.json` 自动生成。
 
-## 数据链路
+## 两条链路
+
+自定义客户端不直接连车端，也不直接连赛事服务器，所有数据都经过官方选手端的 MQTT broker。
+车端的两条链路都以图传模块为中转：
 
 ```text
-裁判系统栈
-  └─ 比赛数据 ───────────────────────────────┐
-                                             │
-电控 0x0310                                  │
-  └─ 图传发射端 UART                         │
-       └─ 图传链路 ── 图传接收端 USB-C ──────┤
-                                             ▼
-                              官方选手端 RoboMasterClient.exe
-                               ├─ MQTT :3333（比赛数据 + CustomByteBlock）
-                               └─ UDP :3334（H.265 图传）
-                                             │
-                                             ▼
-                              自定义客户端 RoboMasterClient2025
+比赛数据：裁判系统栈 ──► 官方选手端 ──MQTT :3333──► 自定义客户端
+视频：    图传接收端   ──► 官方选手端 ──UDP :3334───► 自定义客户端
 ```
 
 官方选手端自己就是 MQTT broker。它不在，自定义客户端连 3333 都连不上；
 图传 daemon 晚于官方选手端启动时，共享内存对不上，需要重启官方选手端。
 
-## 电控状态包
+### 链路 A：自定义控制器 → 图传 → 自定义客户端（0x0310）
+
+```text
+电控主控
+  └─ 图传 UART 921600 ── 0x0310（payload 定长 150/300 B，≤50 Hz）
+       └─ 图传发射端 VT03/VT13
+            └─ 图传无线链路
+                 └─ 图传接收端 USB-C
+                      └─ 官方选手端 RoboMasterClient.exe
+                           └─ 内嵌 MQTT broker :3333
+                                └─ topic CustomByteBlock
+                                     └─ protobuf { bytes data = 1 }
+                                          └─ data = 电控原始字节
+                                               └─ NetworkManager::parseCustomByteBlock
+```
+
+- 电控只往**图传发射端 UART** 写 `0x0310`（921600 8N1），不经过裁判系统主控 MC02；
+  MC02 只负责供电、机器人 ID 和图传对频。
+- `0x0310` 单帧 payload 定长 150 B（初始协议）或 300 B（V1.3），频率上限 50 Hz。
+  我们的状态包只占 payload 开头的 11/12 字节，其余填充不影响识别。
+- 官方选手端把车端自定义块桥接成 MQTT `CustomByteBlock`；protobuf 外壳只有
+  `bytes data = 1`，客户端取出 `data` 后再解析状态包。
+- 客户端分流规则：`data` 长度 ≥ 11 且首字节为 `0x5A` → 状态包；否则按 H.264 视频分片处理。
+- 客户端按 `seq` 去重，重复包和乱序旧包直接丢弃；连续 300 ms 没有新 `seq` 判定失联，
+  UI 保留最后值并灰显。
+
+### 电控状态包（链路 A 的 payload）
 
 经 MQTT 主题 `CustomByteBlock` 传输，小端序、紧凑排列，无保留字节。
 v1 为 11 字节，v2 为 12 字节（多一个模块状态字节），两种都接受。
@@ -105,16 +124,95 @@ v1 为 11 字节，v2 为 12 字节（多一个模块状态字节），两种都
 ```python
 import struct
 
-# v1：11 字节
+# v1：11 字节，version=1
 pkt = struct.pack('<BBBBhhhB',
                   0x5A, 1, friction_status, chassis_status,
                   gimbal_chassis_angle, gimbal_yaw, barrel_pitch, seq)
-# v2：再补 1 字节模块状态
-pkt += bytes([module_status])
+
+# v2：12 字节，version=2，末尾补模块状态
+pkt = struct.pack('<BBBBhhhBB',
+                  0x5A, 2, friction_status, chassis_status,
+                  gimbal_chassis_angle, gimbal_yaw, barrel_pitch, seq,
+                  module_status)
 ```
 
 注意：状态包必须至少 11 字节，且首字节为 `0x5A`；否则会被当作视频分片。
 建议直接发 12 字节 v2，这样模块灯也有数据。
+
+### 链路 B：自定义客户端 → 图传 → 自定义控制器（键盘/鼠标）
+
+```text
+自定义客户端捕获键鼠
+  └─ MQTT KeyboardMouseControl（protobuf，QoS 1，不等 ACK）
+       └─ 官方选手端 RoboMasterClient.exe
+            └─ 图传接收端 USB-C
+                 └─ 图传无线链路
+                      └─ 图传发射端 VT03/VT13
+                           └─ 图传 UART 921600 ── 21 字节遥控帧
+                                └─ 电控主控
+```
+
+- 客户端只发 MQTT protobuf，不拼 21 字节帧；帧由官方选手端/图传发射端生成。
+  键鼠上行走官方 21 字节遥控帧，不走 `0x0311`。
+- protobuf 字段：`mouse_x/y/z`、`left/right/mid_button_down`、`keyboard_value`。
+- 21 字节帧：921600 8N1，帧头 `A9 53`，CRC-16/CCITT-FALSE；客户端只提供
+  `mouse_x/y/z`、鼠标按键状态和 `keyboard_value`，不参与拼帧。
+- 发射端约每 14 ms 输出一帧（约 71 Hz），空闲也发；与链路 A 的 `0x0310` 全双工，
+  两个方向互不排队。
+- 客户端有活动时按 13 ms 最小间隔冲刷（约 75 Hz），静止不发；松手或打开面板时
+  先发一帧全零（中性帧），面板打开期间暂停。
+- QoS 1，但不等 ACK、不重传。链路抖动会静默丢帧，电控必须自己做失联保护。
+- 左键是电平开火请求（按住 = 持续请求），电控按热量/弹量/摩擦轮闭锁，并通过链路 A
+  的 `fire_permitted` 回传。
+- 鼠标量是单帧增量，客户端发送前已乘好灵敏度；电控不要再乘系数，也不要跨帧累加。
+- 客户端只在已登录、非战术模式、无阻挡面板时捕获键鼠；其他情况不发，并补一帧全零。
+
+### 键位设置（链路 B 的 keyboard_value）
+
+客户端只负责把键位打包成 16 位掩码，**电平/上升沿语义由电控实现**。
+`keyboard_value` 为 `uint16` 小端：
+
+| bit | 键 | 我们的用途 | 电控处理 |
+| --- | --- | --- | --- |
+| 0 | W | 前进 | 电平，按住前进 |
+| 1 | S | 后退 | 电平，按住后退 |
+| 2 | A | 左移 | 电平，按住左移 |
+| 3 | D | 右移 | 电平，按住右移 |
+| 4 | Shift | 加速（左右 Shift 同一位） | 电平；操作手只用左 Shift |
+| 5 | Ctrl | 客户端快捷键修饰键 | 忽略 |
+| 6 | Q | 客户端本地调试 | 忽略 |
+| 7 | E | 自动吊射开关 | 上升沿切换 |
+| 8 | R | 制动 | 电平，按住刹车；与 W/S/A/D 同按时制动优先 |
+| 9 | F | 本地飞镖面板 | 忽略 |
+| 10 | G | 跟随 ↔ 小陀螺 | 上升沿切换，切换时清掉自旋状态 |
+| 11 | Z | 空闲 | 保留 |
+| 12 | X | 换弹种 17 ↔ 42 | 上升沿切换 |
+| 13 | C | 小陀螺左旋 | 上升沿启停；仅在底盘模式 2 下有效 |
+| 14 | V | 小陀螺右旋 | 上升沿启停；仅在底盘模式 2 下有效 |
+| 15 | B | 大地图本地标记 | 忽略 |
+
+鼠标字段：
+
+| 输入 | protobuf 字段 | 语义 | 电控处理 |
+| --- | --- | --- | --- |
+| 左键 | `left_button_down` | 按住 = 持续开火请求 | 按热量/弹量/摩擦轮闭锁 |
+| 右键 | `right_button_down` | 当前未分配用途 | 忽略 |
+| 中键 | `mid_button_down` | 共享标点 | 可忽略 |
+| 水平移动 | `mouse_x` | 单帧增量，右正 | 单帧消费，不累加 |
+| 垂直移动 | `mouse_y` | 单帧增量，上/前正 | 单帧消费，不累加 |
+| 滚轮 | `mouse_z` | 单帧增量，上正 | 本键位不用 |
+
+本地快捷键（不进 `keyboard_value`）：`1/2/3`（视角）、`P`（设置/登录）、`Tab`、
+`~`（伤害面板）、`M`、`O`、`I`、`K`、`H`、`F12`、`Esc`。
+
+- 电平键：W/S/A/D/Shift/R，按住为 1，松开为 0。
+- 上升沿键：E/X/G/C/V，只在 0 → 1 的那一帧触发一次，不要按“这一帧是 1”反复触发。
+- G 在底盘模式 `1=跟随` 和 `2=小陀螺` 之间切换；保护模式 `3` 下忽略 G/C/V。
+- 相比旧键位：制动由 Space 改为 R，自动吊射由 T 改为 E，换弹由右 Shift 改为 X；
+  ↑/↓ 已取消，炮管俯仰只用鼠标 Y。
+- 右 Shift 与左 Shift 共用 bit4，会被当成加速，换弹只用 X。
+- 客户端重启后 E/X 状态会与车端不一致，操作手各按一次对齐；失联保护触发时，
+  电控应复位为自动吊射关、17 mm 弹。
 
 ## 功能
 
@@ -123,7 +221,7 @@ pkt += bytes([module_status])
 - 图传：H.265 走 UDP 3334 硬解；H.264 工业相机走 MQTT `CustomByteBlock` 分片。
 - 数据：MQTT 3333 接收比赛数据、机器人状态、`CustomByteBlock`。
 - 装甲日志：`RM_ENGINE_ARMOR_LOG_DIR` 指向引擎日志目录，用于受击方向。
-- 输入：键盘/鼠标按键按位打包转发（W/S/A/D、Shift、Ctrl、Q/E/R/F/G/Z/X/C/V/B）。
+- 输入：键鼠按 16 位掩码打包，经 `KeyboardMouseControl` 下发（详见「键位设置」）。
 - 模拟器：`src/simulator` 可在没有实车时提供模拟数据。
 
 常用环境变量：
@@ -145,5 +243,5 @@ pkt += bytes([module_status])
 - **图传周期性卡顿**：WSL 内核 UDP 接收缓冲太小，执行
   `sudo sysctl -w net.core.rmem_max=16777216`。
 - **机器人不注册 / 日志 offline**：裁判系统栈没起，或热点 ICS 占用了 UDP 端口段。
-- **自定义客户端起不来**：确认 `~/rm26-build/RoboMasterClient2025` 存在
+- **自定义客户端起不来**：确认 `~/rm26-build/RoboMasterClient2025` 存在；
   外部启动脚本和 `run.sh` 都依赖这个固定路径和文件名。

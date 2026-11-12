@@ -2,7 +2,7 @@
 # ============================================================================
 # cquqianli_mock 一键启动 —— WSL 里跑这一条就够
 #
-#   bash /mnt/d/Pacific_doorlock/cquqianli_mock/run.sh
+#   bash /path/to/cquqianli_mock/run.sh
 #
 # 它按顺序做四件事：
 #   1. 稳定本机   —— 放大内核 UDP 接收缓冲、杀掉抢 ClientId 的残留客户端
@@ -10,7 +10,7 @@
 #   3. 拉起依赖   —— 图传 daemon（可选）和官方选手端（= MQTT broker :3333）
 #   4. 启动客户端 —— ~/rm26-build/RoboMasterClient2025
 #
-# 已经用 D:\Pacific_doorlock\裁判系统服务器\start_local_sim.bat 起过整套栈时，
+# 已经用官方赛事服务器 / 官方选手端的启动脚本起过整套栈时，
 # 本脚本会自动复用已在监听的 broker 和已在运行的 daemon，只补启自定义客户端。
 #
 # 首次构建（产物固定为 ~/rm26-build/RoboMasterClient2025）：
@@ -65,7 +65,7 @@ cquqianli_mock 一键启动（WSL Ubuntu 22.04）
   bash run.sh --fix-acl    一次性授权，之后启动官方选手端不再弹 UAC
   bash run.sh --help       显示本帮助
 
-已经用过 D:\Pacific_doorlock\裁判系统服务器\start_local_sim.bat 时，
+已经用官方赛事服务器 / 官方选手端的启动脚本起过整套栈时，
 run.sh 会自动复用已在监听的 MQTT broker 和已在运行的图传 daemon。
 
 环境变量：
@@ -186,7 +186,7 @@ start_video_daemon() {
   step "3/6 图传 daemon（COM5 + 图传 USB）"
 
   # daemon 已在运行时不再枚举 PnP 设备：Get-PnpDevice 偶尔会卡住，
-  # 而 start_local_sim.bat 通常已经先把 daemon 起好了。
+  # 而外部启动脚本通常已经先把 daemon 起好了。
   if daemon_alive; then
     ok "daemon 已在运行，复用"
   else

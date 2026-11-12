@@ -6,26 +6,27 @@ RoboMaster 2026 自定义客户端（Qt 6 / C++17 / QML），运行在 WSL Ubunt
 
 ## 快速开始
 
+完整链路还依赖两套官方程序（本仓库不包含，需要自行下载安装）：
+
+1. **官方赛事服务器**（RoboMasterEngine / 裁判系统栈）—— 提供比赛数据。
+2. **官方选手端 RoboMasterClient** —— 同时充当 MQTT broker（`:3333`），并把图传和
+   `CustomByteBlock` 转发给自定义客户端。
+
+先按官方文档把赛事服务器和官方选手端启动起来，然后：
+
 ```bash
 # 构建（产物固定为 ~/rm26-build/RoboMasterClient2025）
 bash run.sh --build
 
-# 只启动自定义客户端（自动复用已在运行的 broker / daemon）
+# 启动自定义客户端（自动复用已在运行的 broker / daemon）
 bash run.sh
 
 # 一次性授权，之后启动官方选手端不再弹 UAC
 bash run.sh --fix-acl
 ```
 
-整套本地栈（裁判系统、图传 daemon、官方选手端、自定义客户端）直接双击：
-
-```text
-D:\Pacific_doorlock\裁判系统服务器\start_local_sim.bat
-```
-
-`start_local_sim.bat` 会自己拉起全部组件并直接启动
-`~/rm26-build/RoboMasterClient2025`，不经过 `run.sh`。
-`run.sh` 用于手动补启或单独调试，会自动跳过已经在监听/已运行的组件。
+官方选手端已在运行时，`run.sh` 会直接复用它的 3333 端口和已启动的图传 daemon，
+只补启自定义客户端；官方选手端没起时，`run.sh` 会尝试拉起它。
 
 构建依赖：CMake ≥ 3.21、Ninja、GCC、Qt 6（Core/Gui/Widgets/Quick/QuickControls2/
 Multimedia/SerialPort/Svg）、protobuf、FFmpeg（avcodec/avformat/avutil/swscale）、
@@ -145,7 +146,7 @@ pkt += bytes([module_status])
   `sudo sysctl -w net.core.rmem_max=16777216`。
 - **机器人不注册 / 日志 offline**：裁判系统栈没起，或热点 ICS 占用了 UDP 端口段。
 - **自定义客户端起不来**：确认 `~/rm26-build/RoboMasterClient2025` 存在；
-  `start_local_sim.bat` 和 `run.sh` 都依赖这个固定路径和文件名。
+  外部启动脚本和 `run.sh` 都依赖这个固定路径和文件名。
 
 ## 来源与许可
 

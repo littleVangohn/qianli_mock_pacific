@@ -313,6 +313,8 @@ set(SOURCES
     src/simulator/ProtocolSimulator.cpp
     src/network/Protocol.cpp
     src/network/NetworkManager.cpp
+    src/network/ArmSerialLink.cpp
+    src/network/ArmSerialLink.h
     src/network/VideoReceiver.cpp
     src/network/VideoDatagramLogger.cpp
     src/network/VideoReceiver.h

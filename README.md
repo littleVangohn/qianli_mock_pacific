@@ -1,9 +1,9 @@
 # cquqianli_mock
 
-RoboMaster 2026 自定义客户端（Qt 6 / C++17 / QML），运行在 WSL Ubuntu 22.04。
+RoboMaster 2026 自定义客户端（Qt 6 / C++17 / QML），运行在上位机 NUC 的 WSL Ubuntu 22.04。
 数据来自官方选手端的 MQTT broker（:3333），图传来自官方选手端的 UDP（:3334）。
-电控状态经 `0x0310` → 图传链路 → MQTT `CustomByteBlock` 进入客户端；
-键鼠控制沿反方向经 MQTT `KeyboardMouseControl` → 图传 → 21 字节遥控帧下发到电控。
+下位机电控的状态经 `0x0310` → 图传链路 → MQTT `CustomByteBlock` 进入客户端；
+键鼠控制沿反方向经 MQTT `KeyboardMouseControl` → 图传 → 21 字节遥控帧下发到下位机电控。
 
 ## 快速开始
 
@@ -39,6 +39,8 @@ paho-mqtt3c、abseil。
 cquqianli_mock/
 ├── README.md                 本文件
 ├── run.sh                    一键启动 / 构建 / 授权
+├── docs/
+│   └── 机械臂通信协议.md      给电控的机械臂下行接口说明
 └── upstream/
     ├── CMakeLists.txt        客户端构建入口
     ├── config.example.json   配置模板（首次运行复制为 config.json）
@@ -60,10 +62,9 @@ cquqianli_mock/
 `upstream/config.json` 是本机现场配置（IP / 机器人编号），已被 `.gitignore`
 忽略；首次运行 `run.sh` 会从 `config.example.json` 自动生成。
 
-## 两条链路
+## 数据来源
 
-自定义客户端不直接连车端，也不直接连赛事服务器，所有数据都经过官方选手端的 MQTT broker。
-车端的两条链路都以图传模块为中转：
+自定义客户端不直接连下位机电控，也不直接连赛事服务器，比赛数据和视频都经过官方选手端：
 
 ```text
 比赛数据：裁判系统栈 ──► 官方选手端 ──MQTT :3333──► 自定义客户端
@@ -73,19 +74,29 @@ cquqianli_mock/
 官方选手端自己就是 MQTT broker。它不在，自定义客户端连 3333 都连不上；
 图传 daemon 晚于官方选手端启动时，共享内存对不上，需要重启官方选手端。
 
-### 链路 A：自定义控制器 → 图传 → 自定义客户端（0x0310）
+## 两条链路（下位机电控 ↔ 上位机 NUC）
+
+规则里自定义控制器与自定义客户端已经合并成一套，所以整条自定义链路只有两条，
+都是上位机 NUC（运行自定义客户端）与下位机电控之间的上下行，以图传模块为中转：
+
+- 链路 A（上行）：下位机电控 → 图传 → 上位机 NUC，`0x0310` 状态包。
+- 链路 B（下行）：上位机 NUC → 图传 → 下位机电控，键鼠控制。
+
+官方选手端也跑在上位机 NUC 上（Windows 侧），自定义客户端在它的 WSL 里，两者通过本机 MQTT 连接。
+
+### 链路 A（上行）：下位机电控 → 图传 → 上位机 NUC（0x0310）
 
 ```text
-电控主控
+下位机电控
   └─ 图传 UART 921600 ── 0x0310（payload 定长 150/300 B，≤50 Hz）
        └─ 图传发射端 VT03/VT13
             └─ 图传无线链路
                  └─ 图传接收端 USB-C
-                      └─ 官方选手端 RoboMasterClient.exe
+                      └─ 上位机 NUC：官方选手端 RoboMasterClient.exe
                            └─ 内嵌 MQTT broker :3333
                                 └─ topic CustomByteBlock
                                      └─ protobuf { bytes data = 1 }
-                                          └─ data = 电控原始字节
+                                          └─ data = 下位机原始字节
                                                └─ NetworkManager::parseCustomByteBlock
 ```
 
@@ -139,21 +150,21 @@ pkt = struct.pack('<BBBBhhhBB',
 注意：状态包必须至少 11 字节，且首字节为 `0x5A`；否则会被当作视频分片。
 建议直接发 12 字节 v2，这样模块灯也有数据。
 
-### 链路 B：自定义客户端 → 图传 → 自定义控制器（键盘/鼠标）
+### 链路 B（下行）：上位机 NUC → 图传 → 下位机电控（键盘/鼠标）
 
 ```text
-自定义客户端捕获键鼠
+上位机 NUC：自定义客户端捕获键鼠
   └─ MQTT KeyboardMouseControl（protobuf，QoS 1，不等 ACK）
        └─ 官方选手端 RoboMasterClient.exe
             └─ 图传接收端 USB-C
                  └─ 图传无线链路
                       └─ 图传发射端 VT03/VT13
                            └─ 图传 UART 921600 ── 21 字节遥控帧
-                                └─ 电控主控
+                                └─ 下位机电控
 ```
 
 - 客户端只发 MQTT protobuf，不拼 21 字节帧；帧由官方选手端/图传发射端生成。
-  键鼠上行走官方 21 字节遥控帧，不走 `0x0311`。
+  键鼠控制走官方 21 字节遥控帧；机械臂姿态走 `0x0311`（见下）。
 - protobuf 字段：`mouse_x/y/z`、`left/right/mid_button_down`、`keyboard_value`。
 - 21 字节帧：921600 8N1，帧头 `A9 53`，CRC-16/CCITT-FALSE；客户端只提供
   `mouse_x/y/z`、鼠标按键状态和 `keyboard_value`，不参与拼帧。
@@ -185,7 +196,7 @@ pkt = struct.pack('<BBBBhhhBB',
 | 8 | R | 制动 | 电平，按住刹车；与 W/S/A/D 同按时制动优先 |
 | 9 | F | 本地飞镖面板 | 忽略 |
 | 10 | G | 跟随 ↔ 小陀螺 | 上升沿切换，切换时清掉自旋状态 |
-| 11 | Z | 空闲 | 保留 |
+| 11 | Z | 机械臂自定义控制 ↔ 视觉自动控制切换 | 可忽略；机械臂模式以 `0x0311` 的 `relative_time` 为准 |
 | 12 | X | 换弹种 17 ↔ 42 | 上升沿切换 |
 | 13 | C | 小陀螺左旋 | 上升沿启停；仅在底盘模式 2 下有效 |
 | 14 | V | 小陀螺右旋 | 上升沿启停；仅在底盘模式 2 下有效 |
@@ -214,6 +225,32 @@ pkt = struct.pack('<BBBBhhhBB',
 - 客户端重启后 E/X 状态会与车端不一致，操作手各按一次对齐；失联保护触发时，
   电控应复位为自动吊射关、17 mm 弹。
 
+### 机械臂（0x0311）
+
+给电控的完整接口说明见 [docs/机械臂通信协议.md](docs/机械臂通信协议.md)（解析示例、失联保护、
+待确认事项都在里面）。要点：
+
+机械臂姿态为 18 字节紧凑结构，packed、小端，客户端按 **50 Hz 持续发送**：
+
+| 偏移 | 字段 | 类型 | 说明 |
+| --- | --- | --- | --- |
+| 0–13 | `joint_angle[7]` | uint16 × 7 | 7 个关节角，客户端原样透传，不解释单位 |
+| 14–17 | `relative_time` | uint32 | `0` = 自定义控制；`INT_MAX` = 视觉自动控制 |
+
+- 视觉自动控制：持续发关节角全 0、`relative_time = 0x7FFFFFFF` 的状态帧。
+- 自定义控制：把 RS-485 收到的最新 position 按 50 Hz 持续转发，`relative_time` 由
+  自定义控制器填写；串口 300 ms 没有新帧时继续重发最后一帧并打
+  `RM26_ARM_POSITION_STALE`，所以 `relative_time` 不再推进，主控要据此做失联保护。
+- Z 是**点击切换**，不是按住。切换时立即发一帧模式帧（`0` 或 `INT_MAX`，
+  角度全 0，主控只按 `relative_time` 切状态），随后由 50 Hz 持续发送维持。
+- 自定义控制器经 **USB-RS485 直连上位机**，34 字节定长帧：16 字节通信头
+  （客户端接收忽略、发送填 0）+ `position[16:34)`。端口/波特率用
+  `RM_ARM_SERIAL_PORT` / `RM_ARM_SERIAL_BAUD` 配置，默认 115200 8N1。
+- 切换帧同时写回自定义控制器（RS-485 连写 3 帧）；客户端只在已登录、非战术模式、
+  MQTT 已连接时响应 Z。
+- `0x0311` 单条上限 30 字节、75 Hz，每辆车链路独立；18 字节裸载荷与前哨站 10 字节
+  消息按长度区分（18 = 机械臂，10 = 前哨站）。前哨站 10 Hz + 机械臂 50 Hz = 60 Hz。
+
 ## 功能
 
 - 官方 UI 布局还原：按官方客户端导出的坐标树排布，不目测手排。
@@ -232,6 +269,9 @@ pkt = struct.pack('<BBBBhhhBB',
 | `RM_MQTT_PORT` | 覆盖 MQTT 端口（默认配置 3333） |
 | `RM_ENGINE_ARMOR_LOG_DIR` | 引擎装甲日志目录 |
 | `RM_CLIENT_ROBOT_ID` | 覆盖机器人编号 |
+| `RM_ARM_SERIAL_PORT` | 自定义控制器 RS-485 串口（如 `/dev/ttyUSB0`、`COM5`）；不设则关闭机械臂串口输入 |
+| `RM_ARM_SERIAL_BAUD` | RS-485 波特率，默认 115200 |
+| `RM_ARM_SERIAL_MAGIC` | 帧头魔数（如 `0xA5`），用于串口重新同步；不设则按 34 字节固定切帧 |
 | `RM26_BUILD_DIR` | 构建目录（默认 `~/rm26-build`） |
 
 ## 排障

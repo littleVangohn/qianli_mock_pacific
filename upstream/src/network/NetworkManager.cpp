@@ -335,6 +335,13 @@ void NetworkManager::sendData(const QByteArray &data,
                               const QHostAddress &address, quint16 port) {
 #ifdef RM_HAS_MQTT
   if (m_mqttManager && m_mqttManager->isConnected()) {
+    // 官方 0x0311 协议单条 data 上限为 30 字节，超长包官方选手端行为不可靠。
+    constexpr int kCustomControlMaxBytes = 30;
+    if (data.size() > kCustomControlMaxBytes) {
+      qWarning() << "NetworkManager: CustomControl payload exceeds"
+                 << kCustomControlMaxBytes << "bytes:" << data.size();
+      return;
+    }
     robomaster::CustomControl message;
     message.set_data(data.constData(), static_cast<size_t>(data.size()));
 

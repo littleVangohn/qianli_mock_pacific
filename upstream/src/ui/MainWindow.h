@@ -54,6 +54,7 @@ class DataFreshnessGuard;
 class MapCoordinateMapper;
 class ThreatRanker;
 class ExecutionFusion;
+class ArmSerialLink; // 自定义控制器 RS-485 串口
 }
 #include "../widgets/VideoBackgroundWidget.h"
 #include "../widgets/GameResultWidget.h"
@@ -398,6 +399,11 @@ private:
   void scheduleOutpostForward();
   void flushOutpostForward();
 
+  // 机械臂自定义控制 (CustomControl 0x0311)
+  void onArmPositionReceived(const QByteArray &position);
+  void flushArmPosition();
+  void toggleArmControlMode();
+
   // --- 成员变量 (C++11 类内初始化) ---
 
   // --- 基础容器 ---
@@ -591,6 +597,7 @@ private:
   bool m_hasLastMousePos = false;
   QTimer *m_keyboardMouseControlTimer = nullptr;
   QTimer *m_outpostForwardTimer = nullptr;
+  QTimer *m_armForwardTimer = nullptr;
   quint32 m_keyboardMouseMask = 0;
   int m_pendingMouseX = 0;
   int m_pendingMouseY = 0;
@@ -600,6 +607,16 @@ private:
   bool m_keyboardMouseMidDown = false;
   bool m_keyboardMouseHadActiveState = false;
   bool m_keyboardMouseInternalMove = false;
+
+  // 机械臂：Z 切换自定义控制 / 视觉自动控制
+  bool m_armCustomControlActive = false;
+  ArmSerialLink *m_armSerialLink = nullptr; // 自定义控制器 RS-485
+  QByteArray m_lastArmPosition;    // 串口收到的最新 position（18 字节）
+  QByteArray m_armVisionFrame;     // 视觉自动状态帧（18 字节，持续发送）
+  qint64 m_armLastPositionMs = 0;  // 最近一次收到 position 的时间
+  bool m_armStaleNoticeLogged = false;
+  quint64 m_armPositionFramesReceived = 0;
+  quint64 m_armPositionFramesSent = 0;
 
   // 右下角键鼠监视器：记录原始输入，不受上发策略/登录状态影响，
   // 用来直观看到“按了什么”以及“有没有真正发出去”。

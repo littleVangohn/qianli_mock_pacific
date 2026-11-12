@@ -52,10 +52,12 @@
 #include "../core/DataFreshnessGuard.h"
 #include "../core/ExecutionFusion.h"
 #include "../core/MapCoordinateMapper.h"
+#include "../core/RobotArmProtocol.h"
 #include "../core/ThreatRanker.h"
 #include "../core/EngineArmorLogWatcher.h"
 #include "../devhooks/ClientDevHooks.h"
 #include "../network/MqttClient.h"
+#include "../network/ArmSerialLink.h"
 #include "../simulator/ProtocolSimulator.h"
 #include "../network/S1ProtocolManager.h"
 #include "../widgets/BattleMessageWidget.h"
@@ -673,6 +675,41 @@ void MainWindow::initializeCore() {
 
   // 初始化网络管理器
   m_networkManager = new NetworkManager(m_gameData, this);
+
+  // 机械臂：按 50 Hz 持续向 CustomControl（0x0311）发送当前状态帧。
+  // 视觉自动：持续发 relative_time=INT_MAX；自定义控制：持续发串口最新 position。
+  // 50 Hz + 前哨站 10 Hz = 60 Hz，低于 0x0311 的 75 Hz 上限。
+  m_armVisionFrame = RM::ArmProtocol::packPosition(RM::ArmProtocol::Position{});
+  m_armForwardTimer = new QTimer(this);
+  m_armForwardTimer->setTimerType(Qt::PreciseTimer);
+  m_armForwardTimer->setInterval(RM::ArmProtocol::kForwardIntervalMs);
+  connect(m_armForwardTimer, &QTimer::timeout, this,
+          &MainWindow::flushArmPosition);
+  m_armForwardTimer->start();
+
+  // 自定义控制器经 USB-RS485 直连上位机，34 字节定长帧。
+  m_armSerialLink = new RM::ArmSerialLink(this);
+  connect(m_armSerialLink, &RM::ArmSerialLink::positionReceived, this,
+          &MainWindow::onArmPositionReceived);
+  connect(m_armSerialLink, &RM::ArmSerialLink::errorOccurred, this,
+          [](const QString &error) {
+            qWarning().noquote()
+                << QStringLiteral("RM26_ARM_SERIAL error: %1").arg(error);
+          });
+  const QString armSerialPort =
+      qEnvironmentVariable("RM_ARM_SERIAL_PORT").trimmed();
+  if (armSerialPort.isEmpty()) {
+    qInfo() << "RM26_ARM_SERIAL not configured (set RM_ARM_SERIAL_PORT), "
+               "arm serial input disabled";
+  } else {
+    const int armSerialBaud = qEnvironmentVariableIntValue("RM_ARM_SERIAL_BAUD");
+    bool magicOk = false;
+    const int armSerialMagic =
+        qEnvironmentVariable("RM_ARM_SERIAL_MAGIC").toInt(&magicOk, 0);
+    m_armSerialLink->start(armSerialPort,
+                           armSerialBaud > 0 ? armSerialBaud : 115200,
+                           magicOk ? armSerialMagic : -1);
+  }
 
 #ifdef RM_HAS_MQTT
   m_mqttReconnectTimer = new QTimer(this);
@@ -5510,6 +5547,15 @@ bool MainWindow::handleKeyboardMouseControlKey(QKeyEvent *event,
   const bool available =
       canUseKeyboardMouseControl() && !isKeyboardMouseControlBlocked();
 
+  // Z 是点击切换，不是按住：上升沿在本地切换机械臂控制状态，并立刻向
+  // 下位机主控发一帧模式帧（0x0311），同时把模式帧写回 RS-485 自定义控制器。
+  // 该位仍照常进入 keyboard_value，电控可以忽略，以 0x0311 为准。
+  // 只认裸 Z，Ctrl+Z 等组合键不触发，避免和本地快捷键冲突。
+  if (bit == 11 && pressed && !keyWasDown && available &&
+      !(event->modifiers() & Qt::ControlModifier)) {
+    toggleArmControlMode();
+  }
+
   if (keyboardMouseTraceEnabled()) {
     qInfo() << "[keyboard-mouse-trace] stage=key"
             << "key=" << event->key() << "pressed=" << pressed
@@ -5854,6 +5900,118 @@ void MainWindow::flushOutpostForward() {
              .arg(outpost.maxHP)
              .arg(outpost.status)
              .arg(outpost.isDestroyed ? 1 : 0);
+}
+
+// ============================================================================
+// 机械臂 -> CustomControl (0x0311)
+// position（18 字节，packed、小端）：
+//   字节 0-13： joint_angle[7]（uint16 × 7），客户端原样透传
+//   字节 14-17：relative_time（uint32）
+//               0          = 自定义控制状态
+//               0x7FFFFFFF = 视觉自动控制状态
+//               其他值     = 自定义控制器自己的相对时间，客户端不改
+// 自定义控制器经 USB-RS485 直连上位机，34 字节帧（16 字节头 + position[16:34)），
+// ArmSerialLink 提取 position 后由本类按 50 Hz 持续发到 0x0311。
+// 视觉自动状态下持续发 relative_time = INT_MAX 的状态帧；自定义控制状态下
+// 持续重发串口最新 position（没有新数据就重复最后一帧，relative_time 不前进，
+// 下位机可用它判断数据是否新鲜）。
+// ============================================================================
+
+void MainWindow::onArmPositionReceived(const QByteArray &position) {
+  if (position.size() != RM::ArmProtocol::kPositionSize) {
+    return;
+  }
+
+  m_lastArmPosition = position;
+  m_armLastPositionMs = QDateTime::currentMSecsSinceEpoch();
+  m_armStaleNoticeLogged = false;
+  ++m_armPositionFramesReceived;
+  // 视觉自动状态下只缓存；自定义控制状态下由 50 Hz 定时器持续上发。
+}
+
+void MainWindow::flushArmPosition() {
+  if (!m_networkManager || m_armVisionFrame.isEmpty()) {
+    return;
+  }
+
+#ifdef RM_HAS_MQTT
+  // broker 断开时不要每 20 ms 调一次 sendData（那条路径会逐帧告警）。
+  if (!m_networkManager->isMqttConnected()) {
+    return;
+  }
+#endif
+
+  if (m_armCustomControlActive) {
+    if (!m_lastArmPosition.isEmpty()) {
+      // 持续重发最新 position；relative_time 保持自定义控制器给的值。
+      m_networkManager->sendData(m_lastArmPosition, QHostAddress::LocalHost, 0);
+      ++m_armPositionFramesSent;
+    }
+
+    // 串口超过 300 ms 没有新帧：告警一次，但继续重发最后一帧；
+    // relative_time 不前进，下位机应据此（或按帧间隔）做失联保护。
+    if (!m_armStaleNoticeLogged && m_armLastPositionMs > 0) {
+      const qint64 silentMs =
+          QDateTime::currentMSecsSinceEpoch() - m_armLastPositionMs;
+      if (silentMs >= 300) {
+        m_armStaleNoticeLogged = true;
+        qWarning().noquote()
+            << QStringLiteral("RM26_ARM_POSITION_STALE silentMs=%1")
+                   .arg(silentMs);
+      }
+    }
+    return;
+  }
+
+  // 视觉自动：持续发 INT_MAX 状态帧（关节角全 0），模式始终是确定的。
+  m_networkManager->sendData(m_armVisionFrame, QHostAddress::LocalHost, 0);
+  ++m_armPositionFramesSent;
+}
+
+void MainWindow::toggleArmControlMode() {
+  if (!m_networkManager) {
+    return;
+  }
+
+#ifdef RM_HAS_MQTT
+  // broker 不在时切换只会让本地状态和车端脱节；等连上再按。
+  if (!m_networkManager->isMqttConnected()) {
+    qWarning() << "MainWindow: arm mode toggle ignored, MQTT not connected";
+    return;
+  }
+#endif
+
+  m_armCustomControlActive = !m_armCustomControlActive;
+
+  // 切换帧只用 relative_time 表达状态，关节角填 0；
+  // 下位机不应把切换帧里的关节角当作运动指令。
+  RM::ArmProtocol::Position modePosition;
+  modePosition.relativeTime = m_armCustomControlActive
+                                  ? RM::ArmProtocol::kRelativeTimeCustom
+                                  : RM::ArmProtocol::kRelativeTimeVisionAuto;
+  const QByteArray modeFrame = RM::ArmProtocol::packPosition(modePosition);
+
+  // 0x0311 立即发一帧，随后由 50 Hz 定时器持续发送当前状态。
+  m_networkManager->sendData(modeFrame, QHostAddress::LocalHost, 0);
+  ++m_armPositionFramesSent;
+
+  // 同时写回自定义控制器（RS-485）；连写 3 帧覆盖串口偶发误码。
+  if (m_armSerialLink && m_armSerialLink->isOpen()) {
+    for (int i = 0; i < 3; ++i) {
+      m_armSerialLink->writeModeFrame(modePosition);
+    }
+  }
+
+  m_armStaleNoticeLogged = false;
+  m_armLastPositionMs = m_armCustomControlActive
+                            ? QDateTime::currentMSecsSinceEpoch()
+                            : 0;
+
+  qInfo().noquote()
+      << QStringLiteral("RM26_ARM_MODE mode=%1 relativeTime=%2")
+             .arg(m_armCustomControlActive ? QStringLiteral("custom")
+                                           : QStringLiteral("vision"))
+             .arg(modePosition.relativeTime);
 }
 
 /**

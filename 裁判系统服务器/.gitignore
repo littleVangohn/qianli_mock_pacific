@@ -1,0 +1,17 @@
+# 运行时数据（不要提交）
+data/*
+!data/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# InfluxDB 二进制（约 110 MB，超过 GitHub 单文件限制）
+tools/influxdb/*
+!tools/influxdb/README.Download.md
+
+# 官方/第三方二进制（自行放置，见 README）
+vendor/
+
+# 杂项
+tmp/
+**/__pycache__/
+*.pyc

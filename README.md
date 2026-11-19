@@ -5,6 +5,10 @@ RoboMaster 2026 自定义客户端（Qt 6 / C++17 / QML），运行在上位机 
 下位机电控的状态经 `0x0310` → 图传链路 → MQTT `CustomByteBlock` 进入客户端；
 键鼠控制沿反方向经 MQTT `KeyboardMouseControl` → 图传 → 21 字节遥控帧下发到下位机电控。
 
+> **本机一键启动整套链路**：仓库里的 `裁判系统服务器/start_local_sim.bat` 会拉起
+> 赛事服务器、官方选手端、图传 daemon、自定义客户端和 `Local` 热点。
+> 程序放置和排障见 [裁判系统服务器/README.md](裁判系统服务器/README.md)。
+
 ## 快速开始
 
 完整链路还依赖两套官方程序（本仓库不包含，需要自行下载安装）：

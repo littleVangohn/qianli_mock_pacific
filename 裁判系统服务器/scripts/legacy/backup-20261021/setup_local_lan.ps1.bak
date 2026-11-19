@@ -1,0 +1,93 @@
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Runtime.WindowsRuntime
+
+function Wait-WinRtAction($operation) {
+    $method = [System.WindowsRuntimeSystemExtensions].GetMethods() |
+        Where-Object { $_.Name -eq 'AsTask' -and -not $_.IsGenericMethod -and $_.GetParameters().Count -eq 1 } |
+        Select-Object -First 1
+    $task = $method.Invoke($null, @($operation))
+    $task.Wait()
+}
+
+function Wait-WinRtResult($operation, [Type]$resultType) {
+    $method = [System.WindowsRuntimeSystemExtensions].GetMethods() |
+        Where-Object { $_.Name -eq 'AsTask' -and $_.IsGenericMethod -and $_.GetParameters().Count -eq 1 } |
+        Select-Object -First 1
+    $task = $method.MakeGenericMethod($resultType).Invoke($null, @($operation))
+    $task.Wait()
+    return $task.Result
+}
+
+$profiles = [Windows.Networking.Connectivity.NetworkInformation, Windows.Networking.Connectivity, ContentType = WindowsRuntime]::GetConnectionProfiles()
+$profile = $profiles |
+    Where-Object { $_.IsWlanConnectionProfile -and $_.GetNetworkConnectivityLevel() -eq 'InternetAccess' } |
+    Select-Object -First 1
+if ($null -eq $profile) {
+    # Wi-Fi 刚断/重连时 GetInternetConnectionProfile() 可能返回 Clash/Mihomo
+    # 的 TUN 虚拟网卡（ProfileName 是 Meta），拿它去建热点会直接失败。
+    # 等最多 30 秒，只接受真实的上网 profile。
+    $deadline = (Get-Date).AddSeconds(30)
+    do {
+        $profiles = [Windows.Networking.Connectivity.NetworkInformation, Windows.Networking.Connectivity, ContentType = WindowsRuntime]::GetConnectionProfiles()
+        $profile = $profiles |
+            Where-Object { $_.IsWlanConnectionProfile -and $_.GetNetworkConnectivityLevel() -eq 'InternetAccess' } |
+            Select-Object -First 1
+        if ($null -eq $profile) {
+            $candidate = [Windows.Networking.Connectivity.NetworkInformation, Windows.Networking.Connectivity, ContentType = WindowsRuntime]::GetInternetConnectionProfile()
+            if ($null -ne $candidate -and $candidate.ProfileName -notmatch '^(Meta|Clash|Mihomo|TUN)') {
+                $profile = $candidate
+            }
+        }
+        if ($null -ne $profile) { break }
+        Start-Sleep -Seconds 1
+    } while ((Get-Date) -lt $deadline)
+}
+if ($null -eq $profile) {
+    throw 'No Internet connection is available to share (WLAN not re-associated yet).'
+}
+
+$managerType = [Windows.Networking.NetworkOperators.NetworkOperatorTetheringManager, Windows.Networking.NetworkOperators, ContentType = WindowsRuntime]
+$manager = $managerType::CreateFromConnectionProfile($profile)
+$capability = $managerType::GetTetheringCapabilityFromConnectionProfile($profile)
+if ($capability -ne 'Enabled') {
+    throw "The current connection cannot create a mobile hotspot: $capability"
+}
+
+$config = $manager.GetCurrentAccessPointConfiguration()
+$config.Ssid = 'Local'
+$config.Passphrase = '12345678'
+$config.Band = [Windows.Networking.NetworkOperators.TetheringWiFiBand, Windows.Networking.NetworkOperators, ContentType = WindowsRuntime]::TwoPointFourGigahertz
+$config.AuthenticationKind = [Windows.Networking.NetworkOperators.TetheringWiFiAuthenticationKind, Windows.Networking.NetworkOperators, ContentType = WindowsRuntime]::Wpa2
+Wait-WinRtAction ($manager.ConfigureAccessPointAsync($config))
+
+if ($manager.TetheringOperationalState -ne 'On') {
+    $result = Wait-WinRtResult ($manager.StartTetheringAsync()) ([Windows.Networking.NetworkOperators.NetworkOperatorTetheringOperationResult, Windows.Networking.NetworkOperators, ContentType = WindowsRuntime])
+    if ($result.Status -ne 'Success') {
+        throw "Mobile hotspot failed to start: $($result.Status) $($result.AdditionalErrorMessage)"
+    }
+}
+
+Start-Sleep -Seconds 3
+$hotspotAddress = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+    Where-Object { $_.IPAddress -eq '192.168.137.1' } |
+    Select-Object -First 1
+if ($null -eq $hotspotAddress) {
+    throw 'Hotspot started, but its 192.168.137.1 adapter was not found.'
+}
+
+$serverAddress = Get-NetIPAddress -InterfaceIndex $hotspotAddress.InterfaceIndex -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+    Where-Object { $_.IPAddress -eq '192.168.1.2' }
+if (-not $serverAddress) {
+    New-NetIPAddress -InterfaceIndex $hotspotAddress.InterfaceIndex -IPAddress '192.168.1.2' -PrefixLength 24 -SkipAsSource $true | Out-Null
+    Start-Sleep -Seconds 5
+}
+
+$serverAddress = Get-NetIPAddress -InterfaceIndex $hotspotAddress.InterfaceIndex -AddressFamily IPv4 |
+    Where-Object { $_.IPAddress -eq '192.168.1.2' }
+Write-Output 'RoboMaster local LAN is running.'
+Write-Output 'SSID: Local'
+Write-Output 'Password: 12345678'
+Write-Output "Adapter: $($hotspotAddress.InterfaceAlias)"
+Write-Output "Hotspot IP: $($hotspotAddress.IPAddress)"
+Write-Output "RoboMaster Server IP: $($serverAddress.IPAddress) [$($serverAddress.AddressState)]"
+Write-Output "Connected clients: $($manager.ClientCount)"

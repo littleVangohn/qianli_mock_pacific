@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>裁判系统数据接收</title>
+  <style>
+    :root { color-scheme: light; font-family: "Microsoft YaHei", system-ui, sans-serif; background: #f4f5f7; color: #17202a; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    header { background: #15191f; color: white; padding: 18px 24px; border-bottom: 4px solid #e65c2f; }
+    header h1 { font-size: 21px; margin: 0; letter-spacing: 0; }
+    header p { margin: 6px 0 0; color: #b9c0c9; font-size: 13px; }
+    main { max-width: 1180px; margin: 0 auto; padding: 20px; }
+    .summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+    .metric, .panel { background: white; border: 1px solid #dfe3e8; border-radius: 6px; }
+    .metric { padding: 14px 16px; min-height: 82px; }
+    .label { color: #68717d; font-size: 12px; }
+    .value { display: block; margin-top: 7px; font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
+    .panel { margin-bottom: 16px; overflow: hidden; }
+    .panel h2 { font-size: 15px; margin: 0; padding: 12px 14px; background: #f8f9fa; border-bottom: 1px solid #e5e8ec; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #edf0f2; font-size: 13px; vertical-align: top; overflow-wrap: anywhere; }
+    th { color: #5c6570; background: #fbfbfc; font-weight: 600; }
+    code { font-family: Consolas, monospace; font-size: 12px; color: #38414b; }
+    .ok { color: #167647; }
+    .wait { color: #a95016; }
+    .empty { padding: 24px 14px; color: #6b7480; font-size: 13px; }
+    .hp { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 14px; }
+    .hp div { border-left: 3px solid #9da5ae; padding: 7px 10px; background: #f7f8f9; }
+    .hp b { display: block; margin-top: 4px; font-size: 19px; }
+    @media (max-width: 760px) { .summary, .hp { grid-template-columns: repeat(2, minmax(0, 1fr)); } th:nth-child(3), td:nth-child(3) { display: none; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>RoboMaster 裁判系统数据接收</h1>
+    <p id="updated">正在连接本地服务</p>
+  </header>
+  <main>
+    <section class="summary">
+      <div class="metric"><span class="label">硬件端口</span><span class="value" id="ports">0</span></div>
+      <div class="metric"><span class="label">实时流量</span><span class="value" id="rate">0 B/s</span></div>
+      <div class="metric"><span class="label">有效裁判帧</span><span class="value" id="frames">0</span></div>
+      <div class="metric"><span class="label">比赛阶段</span><span class="value" id="phase">等待数据</span></div>
+    </section>
+    <section class="panel">
+      <h2>串口与真实硬件</h2>
+      <table>
+        <thead><tr><th style="width:12%">端口</th><th style="width:31%">类型</th><th style="width:18%">状态</th><th>原始数据预览</th></tr></thead>
+        <tbody id="portRows"></tbody>
+      </table>
+    </section>
+    <section class="panel">
+      <h2>血量</h2>
+      <div class="hp" id="hp"><span class="empty">等待 0x0003 或 0x0201 数据帧</span></div>
+    </section>
+    <section class="panel">
+      <h2>弹丸与经济</h2>
+      <div class="hp" id="economy"><span class="empty">等待 0x0208 数据帧</span></div>
+    </section>
+    <section class="panel">
+      <h2>最近裁判协议帧</h2>
+      <table>
+        <thead><tr><th style="width:18%">命令</th><th style="width:23%">类型</th><th>内容</th></tr></thead>
+        <tbody id="frameRows"></tbody>
+      </table>
+    </section>
+  </main>
+  <script>
+    const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[c]);
+    const tile = (name, value) => `<div><span class="label">${esc(name)}</span><b>${esc(value)}</b></div>`;
+    async function refresh() {
+      try {
+        const state = await fetch('/api/state', {cache: 'no-store'}).then(r => r.json());
+        const ports = state.ports || [];
+        document.querySelector('#ports').textContent = ports.filter(p => p.connected).length + '/' + ports.length;
+        document.querySelector('#rate').textContent = ports.reduce((n, p) => n + p.bytes_per_second, 0).toLocaleString() + ' B/s';
+        document.querySelector('#frames').textContent = ports.reduce((n, p) => n + p.valid_referee_frames, 0).toLocaleString();
+        document.querySelector('#phase').textContent = state.latest['0x0001']?.game_progress_text || '等待数据';
+        document.querySelector('#updated').textContent = '本地服务运行中 · ' + new Date().toLocaleTimeString();
+        document.querySelector('#portRows').innerHTML = ports.map(p => `<tr><td><b>${esc(p.port)}</b></td><td>${esc(p.classification)}</td><td class="${p.connected ? 'ok' : 'wait'}">${p.connected ? '已连接' : esc(p.last_error || '等待')}</td><td><code>${esc(p.raw_preview || '尚无数据')}</code></td></tr>`).join('') || '<tr><td colspan="4" class="empty">未发现串口</td></tr>';
+        const field = state.latest['0x0003']?.hp;
+        const robot = state.latest['0x0201'];
+        let hp = '';
+        if (field) hp += Object.entries(field).map(([k,v]) => tile(k, v)).join('');
+        if (robot) hp += tile('robot_' + robot.robot_id, robot.current_hp + ' / ' + robot.maximum_hp);
+        document.querySelector('#hp').innerHTML = hp || '<span class="empty">等待 0x0003 或 0x0201 数据帧</span>';
+        const eco = state.latest['0x0208'];
+        document.querySelector('#economy').innerHTML = eco ? tile('17 mm', eco.projectile_17mm) + tile('42 mm', eco.projectile_42mm ?? '-') + tile('金币', eco.coins ?? '-') : '<span class="empty">等待 0x0208 数据帧</span>';
+        document.querySelector('#frameRows').innerHTML = (state.recent_frames || []).slice().reverse().map(f => `<tr><td><code>${esc(f.command_id)}</code></td><td>${esc(f.type)}</td><td><code>${esc(JSON.stringify(f))}</code></td></tr>`).join('') || '<tr><td colspan="3" class="empty">公开裁判协议帧尚未到达</td></tr>';
+      } catch (error) {
+        document.querySelector('#updated').textContent = '本地服务连接失败: ' + error.message;
+      }
+    }
+    refresh(); setInterval(refresh, 1000);
+  </script>
+</body>
+</html>

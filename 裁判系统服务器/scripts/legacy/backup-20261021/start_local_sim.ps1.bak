@@ -1,0 +1,616 @@
+﻿# ============================================================================
+# 本机 RoboMaster 赛事服务 / 裁判系统 模拟器
+#
+# 唯一入口：根目录 start_local_sim.bat（双击即可，会自动请求管理员）
+#
+# 为什么必须按这个顺序：
+#   Windows ICS（本地热点 Local 依赖的 SharedAccess 服务）每次启动都会动态
+#   预留一大段 UDP/TCP 端口（实测覆盖 62050-64998）。RMServer 要绑 62103
+#   （日志端 UDP 登录）、AdapterSvrS0 要绑 62101/62102（机器人 Wi-Fi/图传）。
+#   端口被 ICS 占了以后 bind 会静默失败：进程还在、TCP 端口也通，但机器人
+#   永远 S0Robot[0]、日志端永远 [offline]。
+#
+#   正确顺序是：先停 ICS → 起引擎（引擎自己拉起 RMServer/AdapterSvr/日志端/
+#   Redis）让它们占住 62101-62103 → 最后再恢复热点。已经绑定的 socket 不会
+#   被随后启动的 ICS 抢走。
+#
+# 参数：
+#   -DryRun        只打印路径和当前状态，不做任何修改
+#   -SkipInflux    不启动 InfluxDB（日志端仍可 Online，只是历史数据不落库）
+#   -SkipHotspot   不恢复本地热点（只启动服务，适合已经有别的网络）
+#   -ServicesOnly  只起赛事服务/裁判系统，不启动官方选手端和自定义客户端
+#                  （默认会全起：daemon → 官方选手端 → 自定义客户端）
+#   -WslDistro     WSL 发行版名（默认 Ubuntu-22.04）
+# ============================================================================
+
+[CmdletBinding()]
+param(
+    [switch]$DryRun,
+    [switch]$SkipInflux,
+    [switch]$SkipHotspot,
+    [switch]$ServicesOnly,
+    [switch]$WithClients,
+    [string]$WslDistro = 'Ubuntu-22.04'
+)
+
+$ErrorActionPreference = 'Stop'
+
+# 默认起完整链路；只有显式 -ServicesOnly 才只起服务
+if (-not $ServicesOnly) { $WithClients = $true }
+
+$ScriptDir = $PSScriptRoot
+$RepoRoot = Split-Path -Parent $ScriptDir
+$LogDir = Join-Path $RepoRoot 'logs'
+$InfluxDir = Join-Path $RepoRoot 'tools\influxdb'
+$InfluxExe = Join-Path $InfluxDir 'influxd.exe'
+$InfluxData = Join-Path $RepoRoot 'data\influxdb'
+$HotspotScript = Join-Path $ScriptDir 'setup_local_lan.ps1'
+
+$ClientRoot = 'D:\Pacific_doorlock\从零开始认识裁判系统\RoboMasterClient 12.0.0.213_Student\RoboMasterClient 12.0.0.213_Student\RoboMasterClient'
+$ClientExe = Join-Path $ClientRoot 'RoboMasterClient.exe'
+$DaemonExe = Join-Path $ClientRoot 'RoboMasterClient_Data\StreamingAssets\Tools\RMClientDaemon\RMClientDaemon.exe'
+$DaemonDir = Split-Path -Parent $DaemonExe
+
+$EngineRoot = 'D:\Pacific_doorlock\从零开始认识裁判系统\RoboMasterEngine 12.0.0.137_Student\RoboMasterEngine 12.0.0.137_Student'
+$EngineExe = Join-Path $EngineRoot 'RoboMasterEngine.exe'
+$RmServer = Join-Path $EngineRoot 'RoboMasterEngine_Data\StreamingAssets\RMServer'
+$LogClientDir = Join-Path $RmServer 'RMServerLogClient'
+
+$TcpPorts = 15861, 15862, 64998, 25862
+$UdpPorts = 62101, 62102, 62103
+
+function Write-Step([string]$Message) {
+    Write-Host ''
+    Write-Host "== $Message ==" -ForegroundColor Cyan
+}
+function Write-Ok([string]$Message) { Write-Host "  OK   $Message" -ForegroundColor Green }
+function Write-Warn([string]$Message) { Write-Host "  WARN $Message" -ForegroundColor Yellow }
+function Write-Err([string]$Message) { Write-Host "  ERR  $Message" -ForegroundColor Red }
+
+function Test-Admin {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Test-UdpBind([int]$Port) {
+    try {
+        $client = New-Object System.Net.Sockets.UdpClient
+        $client.Client.Bind((New-Object System.Net.IPEndPoint([System.Net.IPAddress]::Any, $Port)))
+        $client.Close()
+        return $true
+    }
+    catch { return $false }
+}
+
+function Test-InternetAccess {
+    # 只看真实上网链路；Clash/Mihomo 的 TUN 网卡即使物理 Wi-Fi 断了也可能
+    # 仍报 Internet，不能把它当作“WLAN 已恢复”。
+    $profiles = Get-NetConnectionProfile -ErrorAction SilentlyContinue |
+        Where-Object { $_.IPv4Connectivity -eq 'Internet' }
+    foreach ($p in $profiles) {
+        if ($p.InterfaceAlias -match '^(Meta|Clash|Mihomo|TUN)') { continue }
+        return $true
+    }
+    return $false
+}
+
+function Wait-InternetAccess([int]$TimeoutSeconds = 30) {
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+        if (Test-InternetAccess) { return $true }
+        Start-Sleep -Seconds 1
+    } while ((Get-Date) -lt $deadline)
+    return $false
+}
+
+function Get-OwnerName([int]$ProcessId) {
+    $p = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
+    if ($p) { return $p.ProcessName }
+    return "pid:$ProcessId"
+}
+
+function Get-ListeningPorts([int[]]$Ports) {
+    $listening = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+        Where-Object { $Ports -contains $_.LocalPort }
+    return @($listening.LocalPort | Sort-Object -Unique)
+}
+
+function Get-BoundUdpPorts([int[]]$Ports) {
+    $bound = Get-NetUDPEndpoint -ErrorAction SilentlyContinue |
+        Where-Object { $Ports -contains $_.LocalPort }
+    return @($bound.LocalPort | Sort-Object -Unique)
+}
+
+function Stop-Stack {
+    Write-Step '停止现有的本机赛事服务'
+    Stop-Process -Name RoboMasterEngine -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 2
+    foreach ($name in 'RMServer', 'AdapterSvrS0', 'RMServerLogClient', 'redis-server') {
+        Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force
+    }
+    Start-Sleep -Seconds 2
+    Write-Ok '旧进程已清理'
+}
+
+function Wait-UdpPortsFree([int]$TimeoutSeconds = 60) {
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+        $busy = @($UdpPorts | Where-Object { -not (Test-UdpBind $_) })
+        if ($busy.Count -eq 0) { return $true }
+        Start-Sleep -Seconds 2
+    } while ((Get-Date) -lt $deadline)
+    return $false
+}
+
+function Start-Influx {
+    if ($SkipInflux) {
+        Write-Warn '按参数跳过 InfluxDB'
+        return
+    }
+    if (Get-Process -Name influxd -ErrorAction SilentlyContinue) {
+        Write-Ok 'InfluxDB 已在运行（复用现有实例）'
+        return
+    }
+    if (-not (Test-Path -LiteralPath $InfluxExe)) {
+        Write-Warn "找不到 InfluxDB：$InfluxExe（跳过）"
+        return
+    }
+
+    Write-Step '启动 InfluxDB'
+    New-Item -ItemType Directory -Force -Path $InfluxData | Out-Null
+    New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+    Start-Process -FilePath $InfluxExe `
+        -ArgumentList '--http-bind-address', '0.0.0.0:8086',
+                      '--bolt-path', (Join-Path $InfluxData 'influxd.bolt'),
+                      '--engine-path', (Join-Path $InfluxData 'engine') `
+        -WorkingDirectory $InfluxDir `
+        -RedirectStandardOutput (Join-Path $LogDir 'influxd.out.log') `
+        -RedirectStandardError (Join-Path $LogDir 'influxd.err.log') `
+        -WindowStyle Hidden | Out-Null
+
+    $deadline = (Get-Date).AddSeconds(25)
+    do {
+        try {
+            $health = Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:8086/health' -TimeoutSec 3
+            if ($health.StatusCode -eq 200) {
+                Write-Ok 'InfluxDB 就绪 (http://127.0.0.1:8086/health)'
+                return
+            }
+        }
+        catch { }
+        Start-Sleep -Seconds 1
+    } while ((Get-Date) -lt $deadline)
+    Write-Warn 'InfluxDB 启动后健康检查未通过；日志端仍可 Online，但历史数据可能不落库'
+}
+
+function Start-EngineAndWait {
+    Write-Step '启动 RoboMasterEngine（引擎会自动拉起 RMServer/AdapterSvr/日志端/Redis）'
+    Start-Process -FilePath $EngineExe -WorkingDirectory $EngineRoot | Out-Null
+
+    $deadline = (Get-Date).AddSeconds(90)
+    do {
+        $ports = Get-ListeningPorts $TcpPorts
+        if (($TcpPorts | Where-Object { $ports -notcontains $_ }).Count -eq 0) { break }
+        Start-Sleep -Seconds 2
+    } while ((Get-Date) -lt $deadline)
+
+    $ports = Get-ListeningPorts $TcpPorts
+    $missing = @($TcpPorts | Where-Object { $ports -notcontains $_ })
+    if ($missing.Count -gt 0) {
+        Write-Err "TCP 端口未全部监听：缺 $($missing -join ',')"
+        return $false
+    }
+    Write-Ok "TCP 已监听：$($ports -join ',')"
+
+    $deadline = (Get-Date).AddSeconds(40)
+    do {
+        $bound = Get-BoundUdpPorts $UdpPorts
+        if (($UdpPorts | Where-Object { $bound -notcontains $_ }).Count -eq 0) { break }
+        Start-Sleep -Seconds 1
+    } while ((Get-Date) -lt $deadline)
+
+    $bound = Get-BoundUdpPorts $UdpPorts
+    $missingUdp = @($UdpPorts | Where-Object { $bound -notcontains $_ })
+    if ($missingUdp.Count -gt 0) {
+        Write-Err "UDP 端口未全部绑定：缺 $($missingUdp -join ',')（ICS 可能又抢回去了）"
+        return $false
+    }
+    Write-Ok "UDP 已绑定：$($bound -join ',')"
+    return $true
+}
+
+function Ensure-InfluxAddress {
+    $hotspot = Get-NetIPAddress -IPAddress '192.168.137.1' -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if (-not $hotspot) {
+        Write-Warn '热点地址 192.168.137.1 不存在，跳过 192.168.1.3'
+        return
+    }
+
+    $existing = Get-NetIPAddress -IPAddress '192.168.1.3' -AddressFamily IPv4 -ErrorAction SilentlyContinue
+    if (-not $existing) {
+        New-NetIPAddress -InterfaceIndex $hotspot.InterfaceIndex -IPAddress '192.168.1.3' -PrefixLength 24 -SkipAsSource $true | Out-Null
+        Write-Ok '已补上 192.168.1.3/24（InfluxDB / MySQL 地址）'
+    }
+
+    # 新加的地址要先经过 DAD（Tentative），变成 Preferred 才算可用。
+    # 旧逻辑只看地址存在就报 OK，会把 Tentative 误判成已就绪。
+    $deadline = (Get-Date).AddSeconds(15)
+    do {
+        $preferred = Get-NetIPAddress -IPAddress '192.168.1.3' -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+            Where-Object { $_.AddressState -eq 'Preferred' } | Select-Object -First 1
+        if ($preferred) { Write-Ok '192.168.1.3/24 已就绪'; return }
+        Start-Sleep -Seconds 1
+    } while ((Get-Date) -lt $deadline)
+    Write-Warn '192.168.1.3/24 仍是 Tentative（不影响引擎，但 InfluxDB 可能连不上）'
+}
+
+function Get-NewLogText([string]$Path, [long]$Offset) {
+    if (-not (Test-Path -LiteralPath $Path)) { return '' }
+    $fs = [IO.File]::Open($Path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+    try {
+        if ($fs.Length -lt $Offset) { $Offset = 0 }
+        [void]$fs.Seek($Offset, [IO.SeekOrigin]::Begin)
+        $sr = New-Object IO.StreamReader($fs)
+        try { return $sr.ReadToEnd() } finally { $sr.Close() }
+    }
+    finally { $fs.Close() }
+}
+
+function Stop-Clients {
+    Write-Step '停止官方选手端 / 图传 daemon'
+    Stop-Process -Name RoboMasterClient -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 1
+    foreach ($name in 'RMClientDaemon', 'RMClientAssist_VideoRecord', 'RMClientAssist_MarkRecognition', 'RMClientAssist_SerialPort', 'RMClientAssist_RemoteSerialPort') {
+        Get-Process -Name $name -ErrorAction SilentlyContinue | Stop-Process -Force
+    }
+    Start-Sleep -Seconds 2
+    Write-Ok '旧客户端已清理'
+}
+
+function Start-Clients {
+    Write-Step '启动完整客户端链路（daemon → 官方选手端 → 自定义客户端）'
+
+    if (-not (Test-Path -LiteralPath $ClientExe)) {
+        Write-Err "找不到官方选手端：$ClientExe"
+        return $false
+    }
+    if (-not (Test-Path -LiteralPath $DaemonExe)) {
+        Write-Err "找不到图传 daemon：$DaemonExe"
+        return $false
+    }
+
+    $dji = Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue | Where-Object { $_.InstanceId -match 'VID_2CA3' }
+    if ($dji) {
+        $coms = @($dji | Where-Object { $_.Class -eq 'Ports' } | ForEach-Object { $_.FriendlyName })
+        Write-Ok "图传接收端已枚举：$($coms -join ', ')"
+    }
+    else {
+        Write-Warn '图传接收端未枚举（无 VID_2CA3 / COM5 / COM8）。服务会起来，但不会出图。'
+        Write-Warn '插好 DJI 接收端后重跑：start_local_sim.bat -WithClients'
+    }
+
+    Stop-Clients
+
+    Write-Ok '启动图传 daemon...'
+    Start-Process -FilePath $DaemonExe -WorkingDirectory $DaemonDir | Out-Null
+    Start-Sleep -Seconds 6
+
+    $playerLog = Join-Path $env:USERPROFILE 'AppData\LocalLow\DJI\RoboMasterClient\Player.log'
+    $logOffset = 0
+    if (Test-Path -LiteralPath $playerLog) { $logOffset = (Get-Item $playerLog).Length }
+
+    Write-Ok '启动官方选手端...'
+    Start-Process -FilePath $ClientExe -WorkingDirectory $ClientRoot | Out-Null
+
+    $deadline = (Get-Date).AddSeconds(60)
+    $brokerUp = $false
+    do {
+        if (Get-NetTCPConnection -LocalPort 3333 -State Listen -ErrorAction SilentlyContinue) { $brokerUp = $true; break }
+        Start-Sleep -Seconds 1
+    } while ((Get-Date) -lt $deadline)
+    if ($brokerUp) { Write-Ok 'MQTT broker 3333 已监听' }
+    else { Write-Warn 'MQTT broker 3333 未监听（官方选手端可能没登录/卡住）' }
+
+    $deadline = (Get-Date).AddSeconds(90)
+    $loggedIn = $false
+    do {
+        $newLog = Get-NewLogText $playerLog $logOffset
+        if ($newLog -match 'Login : Success') { $loggedIn = $true; break }
+        Start-Sleep -Seconds 2
+    } while ((Get-Date) -lt $deadline)
+    if ($loggedIn) { Write-Ok '官方选手端 Login : Success' }
+    else { Write-Warn '日志里没看到 Login : Success；请确认官方选手端已登录 R1-Hero' }
+
+    Write-Ok "启动 WSL 自定义客户端（$WslDistro）..."
+    # wsl.exe 会往 stderr 打「localhost 代理」之类的提示；在 Stop 模式下
+    # PowerShell 5.1 会把它当成终止错误。这一段临时改成 Continue。
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & wsl -d $WslDistro -- pkill -9 -x RoboMasterClien 2>&1 | Out-Null
+        Start-Sleep -Seconds 1
+
+        # 直接用当前 WSL 的默认网关（Windows 主机 IP）拉起客户端。
+        # 不经过 run.sh：run.sh 第 3 步会在 WSL 里调 PowerShell 查 PnP 设备，
+        # 这一步在某些情况下会挂住，导致客户端永远起不来。
+        # WSL 刚冷启动时 ip route 可能还没就绪，这里重试几次。
+        $wslHost = $null
+        for ($r = 1; $r -le 5; $r++) {
+            $route = & wsl -d $WslDistro -- ip route show default 2>$null
+            if ($route -match 'via\s+([0-9.]+)') { $wslHost = $Matches[1]; break }
+            Start-Sleep -Seconds 2
+        }
+        if (-not $wslHost) {
+            Write-Warn '拿不到 WSL 的 Windows 主机 IP，跳过自定义客户端'
+        }
+        else {
+            Write-Ok "自定义客户端 broker = $wslHost`:3333"
+            # 用登录 shell（bash -lc）拉起：与手动验证过的命令一致。
+            # 不用 run.sh（它在 WSL 里调 PowerShell 查 PnP 可能挂住）。
+            $EngineLogWsl = '/mnt/d/Pacific_doorlock/从零开始认识裁判系统/RoboMasterEngine 12.0.0.137_Student/RoboMasterEngine 12.0.0.137_Student/RoboMasterEngine_Data/StreamingAssets/RMServer/RMServerLogClient/RM裁判系统日志文件夹3.0'
+            $bashCmd = "cd `$HOME/rm26-build && RM_MQTT_BROKER=$wslHost RM_MQTT_PORT=3333 " +
+                       "RM_ENGINE_ARMOR_LOG_DIR='$EngineLogWsl' " +
+                       'setsid nohup ./RoboMasterClient2025 > /tmp/cquqianli_client.log 2>&1 < /dev/null & sleep 6'
+
+            $wslProc = $null
+            for ($try = 1; $try -le 3; $try++) {
+                & wsl -d $WslDistro -- pkill -9 -x RoboMasterClien 2>&1 | Out-Null
+                Start-Sleep -Seconds 1
+                # 末尾的 sleep 6 很关键：一次性 wsl.exe 会话退出时，WSL 会把这个
+                # 会话里还没初始化完的子进程一起带走；setsid + nohup 挡不住。
+                # 让 launcher 多活 6 秒，客户端才真正脱离（2026-10-21 实测）。
+                & wsl -d $WslDistro -- bash -lc $bashCmd 2>&1 | Out-Null
+
+                # 等 launcher 退出后再用 -x 精确匹配 comm（Linux 截断成 15 字符
+                # RoboMasterClien）。不要用 pgrep -f：launcher 自己的命令行里
+                # 也含 RoboMasterClient2025，会把“没起来”误判成“起来了”。
+                Start-Sleep -Seconds 8
+                $wslProc = & wsl -d $WslDistro -- pgrep -ax RoboMasterClien 2>$null
+                if ($wslProc) { break }
+                Write-Warn "第 $try 次启动自定义客户端未成功，重试..."
+            }
+
+            if ($wslProc) { Write-Ok "自定义客户端运行中：$($wslProc -join ' ')" }
+            else {
+                Write-Warn 'WSL 里没找到自定义客户端，看 /tmp/cquqianli_client.log'
+            }
+        }
+    }
+    finally {
+        $ErrorActionPreference = $prevEap
+    }
+
+    $mqttSessions = Get-NetTCPConnection -LocalPort 3333 -State Established -ErrorAction SilentlyContinue |
+        Where-Object { $_.RemoteAddress -notin @('127.0.0.1', '::1') }
+    if ($mqttSessions) { Write-Ok "自定义客户端 MQTT 已连接：$($mqttSessions.RemoteAddress -join ', ')" }
+    else { Write-Warn '没看到来自 WSL 的 MQTT 连接' }
+
+    return $true
+}
+
+function Show-Status {
+    Write-Step '本机模拟器状态'
+    foreach ($name in 'RoboMasterEngine', 'RMServer', 'AdapterSvrS0', 'RMServerLogClient', 'redis-server', 'influxd') {
+        $p = Get-Process -Name $name -ErrorAction SilentlyContinue
+        if ($p) { Write-Host ("  {0,-20} RUN  pid={1}" -f $name, ($p.Id -join ',')) -ForegroundColor Green }
+        else { Write-Host ("  {0,-20} NOT RUNNING" -f $name) -ForegroundColor Yellow }
+    }
+
+    Write-Host ''
+    Write-Host '  TCP 监听：'
+    Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+        Where-Object { $TcpPorts -contains $_.LocalPort } |
+        Sort-Object LocalPort | ForEach-Object {
+            Write-Host ("    {0,-6} {1}" -f $_.LocalPort, (Get-OwnerName $_.OwningProcess))
+        }
+
+    Write-Host '  UDP 绑定：'
+    Get-NetUDPEndpoint -ErrorAction SilentlyContinue |
+        Where-Object { $UdpPorts -contains $_.LocalPort } |
+        Sort-Object LocalPort | ForEach-Object {
+            Write-Host ("    {0,-6} {1}" -f $_.LocalPort, (Get-OwnerName $_.OwningProcess))
+        }
+
+    $link = Get-NetTCPConnection -RemotePort 64998 -State Established -ErrorAction SilentlyContinue |
+        Where-Object { $_.RemoteAddress -eq '192.168.1.2' } | Select-Object -First 1
+    if ($link) { Write-Host "  引擎 -> 192.168.1.2:64998  ESTABLISHED ($(Get-OwnerName $link.OwningProcess))" -ForegroundColor Green }
+    else { Write-Host '  引擎 -> 192.168.1.2:64998  未建立' -ForegroundColor Yellow }
+
+    $logProc = Get-Process -Name RMServerLogClient -ErrorAction SilentlyContinue
+    if ($logProc) {
+        $title = $logProc.MainWindowTitle
+        if ($title -match '\[offline\]') { Write-Host "  日志端：$title" -ForegroundColor Yellow }
+        else { Write-Host "  日志端：$title" -ForegroundColor Green }
+    }
+
+    Write-Host ''
+    Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+        Where-Object { $_.IPAddress -in '192.168.137.1', '192.168.1.2', '192.168.1.3' } |
+        ForEach-Object {
+            Write-Host ("  IP  {0,-15} {1} [{2}]" -f $_.IPAddress, $_.InterfaceAlias, $_.AddressState)
+        }
+}
+
+# ---------------------------------------------------------------------------
+# 主流程
+# ---------------------------------------------------------------------------
+Write-Host '============================================================' -ForegroundColor Cyan
+Write-Host ' RoboMaster 本机模拟器 —— 赛事服务 + 裁判系统' -ForegroundColor Cyan
+Write-Host '============================================================' -ForegroundColor Cyan
+Write-Host "  项目目录: $RepoRoot"
+Write-Host "  引擎目录: $EngineRoot"
+
+if (-not (Test-Path -LiteralPath $EngineExe)) {
+    $found = Get-ChildItem 'D:\Pacific_doorlock\从零开始认识裁判系统' -Recurse -Filter 'RoboMasterEngine.exe' -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    if ($found) {
+        $EngineExe = $found.FullName
+        $EngineRoot = $found.DirectoryName
+        $RmServer = Join-Path $EngineRoot 'RoboMasterEngine_Data\StreamingAssets\RMServer'
+        $LogClientDir = Join-Path $RmServer 'RMServerLogClient'
+        Write-Host "  自动找到引擎: $EngineExe"
+    }
+    else {
+        Write-Err '找不到 RoboMasterEngine.exe'
+        exit 1
+    }
+}
+
+if (-not (Test-Admin)) {
+    Write-Warn '需要管理员权限，正在重新以管理员身份启动...'
+    Start-Process -FilePath 'powershell.exe' -Verb RunAs -ArgumentList @(
+        '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`""
+    ) | Out-Null
+    exit 0
+}
+
+if ($DryRun) {
+    Write-Step 'DryRun：只检查，不修改'
+    Write-Host "  InfluxDB: $InfluxExe"
+    Write-Host "  数据目录: $InfluxData"
+    Write-Host "  热点脚本: $HotspotScript"
+    Write-Host "  当前 UDP 可绑定: $(($UdpPorts | ForEach-Object { "$_=$(Test-UdpBind $_)" }) -join ' ')"
+    Show-Status
+    exit 0
+}
+
+$profiles = Get-NetConnectionProfile -ErrorAction SilentlyContinue
+if ($profiles | Where-Object { $_.Name -eq 'cpxt' }) {
+    Write-Warn '当前连着 cpxt 外部裁判网：本机模拟器会占用 192.168.1.2，可能与外部服务器冲突。'
+    Write-Warn '如果要用外部 cpxt，请现在按 Ctrl+C 取消；3 秒后继续...'
+    Start-Sleep -Seconds 3
+}
+
+# Clash/Mihomo TUN 会接管默认路由。热点切换导致 Wi-Fi 瞬断时，它常因找不到
+# 出口网卡而重启内核，表现为“Wi-Fi 图标连着但上不了外网”。这里只提醒，
+# 不修改用户的代理配置；RM 的 192.168.x 流量本身不需要走代理。
+$tunAdapters = Get-NetAdapter -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -match '^(Meta|Clash|Mihomo|TUN)' }
+if ($tunAdapters) {
+    Write-Warn "检测到代理 TUN 网卡：$($tunAdapters.Name -join ', ')"
+    Write-Warn '热点切换会瞬断 Wi-Fi，Clash 可能重启并短暂断外网；建议跑模拟器时关掉 TUN 模式。'
+}
+
+# 1) 清理旧栈
+Stop-Stack
+
+# 2) InfluxDB（不依赖 ICS，可先起）
+Start-Influx
+
+# 3) 停 ICS -> 起引擎 -> 确认 62101-62103 已被服务占住
+$stackOk = $false
+for ($attempt = 1; $attempt -le 2; $attempt++) {
+    Write-Step "释放 ICS 占用的端口（第 $attempt 次）"
+    Stop-Service SharedAccess -Force -ErrorAction SilentlyContinue
+    Stop-Service icssvc -Force -ErrorAction SilentlyContinue
+    if (Wait-UdpPortsFree 60) {
+        Write-Ok 'UDP 62101/62102/62103 当前可绑定'
+    }
+    else {
+        Write-Err 'UDP 62101-62103 仍被占用，ICS 没有释放。请重启电脑后再双击启动器。'
+        exit 1
+    }
+
+    if (Start-EngineAndWait) { $stackOk = $true; break }
+    Write-Warn '本次启动未占住端口，清理后重试一次...'
+    Stop-Stack
+}
+
+if (-not $stackOk) {
+    Write-Err '服务未能占住 62101-62103。请确认没有别的程序占用，或重启电脑后再试。'
+    exit 1
+}
+
+# 4) 恢复热点（已绑定的 socket 不会被抢）
+if (-not $SkipHotspot) {
+    # 停 ICS 会让 Wi-Fi 断开重连。等它恢复 InternetAccess 再开热点，否则
+    # setup_local_lan.ps1 会拿不到可共享的 profile，直接抛
+    # "No Internet connection is available to share."。
+    if (-not (Wait-InternetAccess 30)) {
+        Write-Warn 'WLAN 30 秒内没有恢复 InternetAccess，仍尝试启动热点'
+    }
+
+    $hotspotOk = $false
+    for ($hotspotTry = 1; $hotspotTry -le 4; $hotspotTry++) {
+        Write-Step "恢复本地热点 Local（第 $hotspotTry 次）"
+        try {
+            & $HotspotScript
+            Write-Ok '热点脚本执行完成'
+        }
+        catch {
+            Write-Warn "热点脚本失败：$($_.Exception.Message)"
+        }
+
+        # 热点起来后 192.168.137.1 会先出现；192.168.1.2 要经过 DAD 才从
+        # Tentative 变 Preferred。引擎/选手端只认 Preferred。
+        Start-Sleep -Seconds 6
+        $ip137 = Get-NetIPAddress -IPAddress '192.168.137.1' -AddressFamily IPv4 -ErrorAction SilentlyContinue
+        $ip12 = Get-NetIPAddress -IPAddress '192.168.1.2' -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+            Where-Object { $_.AddressState -eq 'Preferred' } | Select-Object -First 1
+        if ($ip137 -and $ip12) { $hotspotOk = $true; break }
+
+        Write-Warn "热点未就绪（192.168.137.1=$([bool]$ip137)，192.168.1.2 Preferred=$([bool]$ip12)），重试..."
+        [void](Wait-InternetAccess 20)
+    }
+
+    if ($hotspotOk) {
+        Write-Ok '热点就绪：192.168.137.1 / 192.168.1.2 均为 Preferred'
+    }
+    else {
+        Write-Warn '热点多次尝试仍未就绪；机器人/官方选手端可能连不上'
+        Write-Warn '可稍后单独运行 scripts\setup_local_lan.ps1；若仍失败，先关掉 Clash/Mihomo TUN 再试'
+    }
+
+    Ensure-InfluxAddress
+
+    $boundAfter = Get-BoundUdpPorts $UdpPorts
+    $missingAfter = @($UdpPorts | Where-Object { $boundAfter -notcontains $_ })
+    if ($missingAfter.Count -gt 0) {
+        Write-Warn "热点恢复后 UDP 端口丢失：$($missingAfter -join ',')（可能需要重跑一次）"
+    }
+    else {
+        Write-Ok '热点恢复后 62101/62102/62103 仍由服务持有'
+    }
+}
+else {
+    Write-Warn '按参数跳过热点恢复'
+}
+
+# 5) 日志端兜底 + 等待 Online
+$deadline = (Get-Date).AddSeconds(30)
+do {
+    $logProc = Get-Process -Name RMServerLogClient -ErrorAction SilentlyContinue
+    if ($logProc -and $logProc.MainWindowTitle -notmatch '\[offline\]') { break }
+    Start-Sleep -Seconds 1
+} while ((Get-Date) -lt $deadline)
+
+$logProc = Get-Process -Name RMServerLogClient -ErrorAction SilentlyContinue
+if (-not $logProc) {
+    Write-Warn '日志端进程不存在，尝试手动启动...'
+    if (Test-Path -LiteralPath (Join-Path $LogClientDir 'RMServerLogClient.exe')) {
+        Start-Process -FilePath (Join-Path $LogClientDir 'RMServerLogClient.exe') -WorkingDirectory $LogClientDir | Out-Null
+        Start-Sleep -Seconds 8
+    }
+}
+
+# 6) 状态汇总
+Show-Status
+
+if ($WithClients) {
+    [void](Start-Clients)
+    Show-Status
+}
+
+Write-Host ''
+if ($WithClients) {
+    Write-Host '完整链路已启动：赛事服务 + 裁判系统 + 官方选手端 + 自定义客户端。' -ForegroundColor Green
+}
+else {
+    Write-Host '本机模拟器已启动（仅赛事服务/裁判系统）。' -ForegroundColor Green
+    Write-Host '要连官方选手端和自定义客户端：双击 start_local_sim.bat（默认全起）'
+}
+Write-Host ''
+Write-Host '如果日志端仍显示 [offline]，先看 UDP 62103 是否由 RMServer 持有。'
+exit 0
